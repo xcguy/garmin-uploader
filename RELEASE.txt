@@ -2,7 +2,7 @@
 RELEASE:
 Garmin Connect Python Uploader Release Notes:
 
-Release 2012.11.08:
+Release 2012.11.11:
   Comments:
   There have been no changes to the functionality of GcpUploader. It was
   merely converted to a python package that can be installed using pip
