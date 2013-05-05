@@ -2,6 +2,21 @@
 RELEASE:
 Garmin Connect Python Uploader Release Notes:
 
+Release 2012.05.05:
+  Comments:
+  Fixed issue where script failed if user's Garmin Connect display name was 
+  not the same as their login name.  Garmin Connect returns the user's 
+  display name as the 'username' instead of the login name.  Most people using
+  the script apparently never change their display name, which defaults to the
+  user's login name.
+  
+  Changes:
+  1) UploadGarmin.py now just verifies that the username JSON response to the 
+     login transaction is not empty instead of comparing it to the login name.
+     It was first verified that the user cannot change their display name to 
+     an empty string in Garmin Connect, which would indicate a failed login 
+     with the new scheme.
+
 Release 2012.11.11:
   Comments:
   There have been no changes to the functionality of GcpUploader. It was
