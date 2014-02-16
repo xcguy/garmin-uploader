@@ -100,7 +100,7 @@ class UploadGarmin:
             mode = 'r'
         
         params = {
-            "responseContentType" : "text%2Fhtml",
+            "responseContentType" : "text/html",
             "data" : open(uploadFile, mode)
         }
 
@@ -119,13 +119,11 @@ class UploadGarmin:
         #print uploadFile
         #print json
         #print '--------------debug-------------'
-        if len(simplejson.loads(json)["detailedImportResult"]["successes"])==0:
-            if len(simplejson.loads(json)["detailedImportResult"]["failures"]) != 0:
-                # File already exists on Garmin Connect
-                return ['EXISTS', simplejson.loads(json)["detailedImportResult"]["failures"][0]["internalId"]]
-            else:
-                # Don't know what failed
-                return ['FAIL', 'Upload Fail']
+        if len(simplejson.loads(json)["detailedImportResult"]["successes"]) == 0:
+          if simplejson.loads(json)["detailedImportResult"]["failures"][0]["messages"][0]['code'] == 202:
+            return ['EXISTS', simplejson.loads(json)["detailedImportResult"]["failures"][0]["internalId"]]
+          else:
+            return ['FAIL', simplejson.loads(json)["detailedImportResult"]["failures"][0]["messages"]]
         else:
             # Upload was successsful
             return ['SUCCESS', simplejson.loads(json)["detailedImportResult"]["successes"][0]["internalId"]]
