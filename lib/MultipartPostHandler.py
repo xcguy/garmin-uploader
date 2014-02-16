@@ -92,10 +92,6 @@ class MultipartPostHandler(urllib2.BaseHandler):
             boundary = mimetools.choose_boundary()
         if buf is None:
             buf = StringIO()
-        for(key, value) in vars:
-            buf.write('--%s\r\n' % boundary)
-            buf.write('Content-Disposition: form-data; name="%s"' % key)
-            buf.write('\r\n\r\n' + value + '\r\n')
         for(key, fd) in files:
             file_size = os.fstat(fd.fileno())[stat.ST_SIZE]
             filename = fd.name.split('/')[-1]
@@ -106,6 +102,10 @@ class MultipartPostHandler(urllib2.BaseHandler):
             # buffer += 'Content-Length: %s\r\n' % file_size
             fd.seek(0)
             buf.write('\r\n' + fd.read() + '\r\n')
+        for(key, value) in vars:
+            buf.write('--%s\r\n' % boundary)
+            buf.write('Content-Disposition: form-data; name="%s"' % key)
+            buf.write('\r\n\r\n' + value + '\r\n')
         buf.write('--' + boundary + '--\r\n\r\n')
         buf = buf.getvalue()
         return boundary, buf
