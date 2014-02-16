@@ -2,6 +2,17 @@
 RELEASE:
 Garmin Connect Python Uploader Release Notes:
 
+Release 2014.02.16:
+  Comments:
+  Something changed with the Garmin Connect web site causing uploads to fail.
+  They are now particular about the order of parts in the Multi-part post.
+  Specifically, they want the filename as the first part of the multi-part
+  post.
+  
+  Changes:
+  1) UploadGarmin.py now give better information if an upload fails
+  2) MultipartPostHandler.py now outputs the filename part first.
+
 Release 2012.05.05:
   Comments:
   Fixed issue where script failed if user's Garmin Connect display name was 
