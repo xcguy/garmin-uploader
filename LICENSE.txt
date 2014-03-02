@@ -11,7 +11,5 @@ File: gupload.py
 License: GNU General Public License (GPL)
 
 File: UploadGarmin.py
-License: BSD
+License: Apache 2.0
 
-File: MultipartPostHandler.py
-License: GNU Lesser General Public License (LGPL)
