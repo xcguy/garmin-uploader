@@ -4,10 +4,7 @@ File: gupload.py
 License: GNU General Public License (GPL)
 
 File: UploadGarmin.py
-License: BSD
-
-File: MultipartPostHandler.py
-License: GNU Lesser General Public License (LGPL)
+License: Apache 2.0
 
 
 DISCLAIMER:
@@ -62,6 +59,7 @@ directory to your PATH environment variable.
 Required Python Modules: (automatically installed by pip)
 logging
 simplejson
+requests
 
 Garmin Connect Account:
 You must already have a Garmin Connect account set up.  If you
