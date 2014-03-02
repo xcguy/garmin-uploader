@@ -13,7 +13,7 @@ except ImportError:
 
 setup(
 	name = "GcpUploader",
-	version = "2014.02.16",
+	version = "2014.03.01",
 	author = "David E. Lotton",
 	author_email = "yellow56@gmail.com",
 	description = "A tool to upload FIT, GPX, and TCX files to the Garmin Connect web site.",
@@ -24,11 +24,12 @@ setup(
 	package_dir = {'': 'lib'},
 	scripts = ["gupload.py"],
 
-	py_modules = ['ez_setup', 'UploadGarmin', 'MultipartPostHandler'],
+	py_modules = ['ez_setup', 'UploadGarmin'],
 
 	install_requires = [
 		"logging",
 		"simplejson",
+		"requests",
 	],
 
 	classifiers = [
