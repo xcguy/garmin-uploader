@@ -253,7 +253,7 @@ class UploadGarmin:
 
     def name_workout(self, workout_id, workout_name):
         cookies = self._get_cookies()
-        data = {"value": workout_name.encode("UTF-8")}
+        data = {"value": workout_name.decode("UTF-8").encode("UTF-8")}
         self._rate_limit()
         res = requests.post('http://connect.garmin.com/proxy/activity-service-1.0/json/name/%d' % (workout_id), data=data, cookies=cookies)
         res = res.json()["display"]["value"]
