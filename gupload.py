@@ -198,7 +198,7 @@ if len(workouts)==1:
     if myargs.t:
         activityType=myargs.t[0]
     else:
-      activityType = None
+        activityType = None
 
 # Create object
 g = UploadGarmin.UploadGarmin(logLevel=logLevel)
@@ -228,7 +228,7 @@ if len(workouts) == 1 and workouts[0][1] == 'SUCCESS':
         g.set_activity_type(workouts[0][2], activityType)
         logging.info('Acivity type \'' + activityType + '\' written.')
     else: 
-            logging.error('Acivity name not written')
+        logging.error('Acivity name not written')
 
 exit()
 
