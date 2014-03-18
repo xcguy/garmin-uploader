@@ -87,6 +87,7 @@ parser= argparse.ArgumentParser(
     """)
 parser.add_argument('filename', type=str, nargs='+', help='Path and name of file(s) to upload.')
 parser.add_argument('-a', type=str, nargs=1, help='Sets the activity name for the upload file. This option is ignored if multiple upload files are given.')
+parser.add_argument('-t', type=str, nargs=1, help='Sets activity type. This option is ignored if multiple upload files are given.')
 parser.add_argument('-l', type=str, nargs=2, help='Garmin Connect login credentials \'-l username password\'')
 parser.add_argument('-v', type=int, nargs=1, default=[3], choices=[1, 2, 3, 4, 5] , help='Verbose - select level of verbosity. 1=DEBUG(most verbose), 2=INFO, 3=WARNING, 4=ERROR, 5= CRITICAL(least verbose). [default=3]')
 
@@ -188,9 +189,16 @@ if len(workouts) == 0:
     logging.critical('No valid Files.')
     exit(1)
 
-if myargs.a and len(workouts)==1:
-    activityName=myargs.a[0]
-    logging.debug('Activity Name: ' + activityName)
+if len(workouts)==1:
+    if myargs.a:
+        activityName=myargs.a[0]
+        logging.debug('Activity Name: ' + activityName)
+    else:
+        activityName = None
+    if myargs.t:
+        activityType=myargs.t[0]
+    else:
+      activityType = None
 
 # Create object
 g = UploadGarmin.UploadGarmin(logLevel=logLevel)
@@ -210,14 +218,17 @@ for workout in workouts:
     print 'File: ' + workout[0] + '    ID: ' + str(workout[2]) + '   Status: ' + workout[1]
 
 
-# Name workout if name given. Only for single file.  Easier
-# to name multiple files from the Garmin Connect site.
-if 'activityName' in locals() and len(workouts) == 1:
-    if workouts[0][1] == 'SUCCESS':
+# Name workout and/or set activity type. Only available for single file. 
+# Easier to name multiple files from the Garmin Connect site.
+if len(workouts) == 1 and workouts[0][1] == 'SUCCESS':
+    if activityName:
         g.name_workout(workouts[0][2], activityName)
         logging.info('Acivity name \'' + activityName + '\' written.')
+    if activityType:
+        g.set_activity_type(workouts[0][2], activityType)
+        logging.info('Acivity type \'' + activityType + '\' written.')
     else: 
-        logging.error('Acivity name not written')
+            logging.error('Acivity name not written')
 
 exit()
 

@@ -261,6 +261,16 @@ class UploadGarmin:
         if res != workout_name:
             raise Exception("Naming workout has failed")
 
+    def set_activity_type(self, workout_id, activity_type):
+        cookies = self._get_cookies()
+        #data = {"value": activity_type.encode("UTF-8")}
+        self._rate_limit()
+        res = requests.post("http://connect.garmin.com/proxy/activity-service-1.2/json/type/" + str(workout_id), data={"value": activity_type}, cookies=cookies)
+        res = res.json()
+        
+        if "activityType" not in res or res["activityType"]["key"] != activity_type:
+            raise Exception("Unable to set activity type")
+
 
 
 if __name__ == '__main__':
