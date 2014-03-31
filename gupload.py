@@ -94,6 +94,8 @@ parser.add_argument('-v', type=int, nargs=1, default=[3], choices=[1, 2, 3, 4, 5
 myargs = parser.parse_args()
 logLevel = myargs.v[0]*10
 
+
+
 logging.basicConfig(level=logLevel)
 
 if platform.system() == 'Windows':
@@ -141,7 +143,7 @@ def obscurePassword(password):
         return(password[1] + '*')
     else:
         obscured=password[0]
-        for letter in range(1, length-1):
+        for _ in range(1, length-1):
             obscured=obscured+'*'
         obscured=obscured+password[length-1]
         return(obscured)
@@ -222,13 +224,16 @@ for workout in workouts:
 # Easier to name multiple files from the Garmin Connect site.
 if len(workouts) == 1 and workouts[0][1] == 'SUCCESS':
     if activityName:
-        g.name_workout(workouts[0][2], activityName)
-        logging.info('Acivity name \'' + activityName + '\' written.')
+        if g.name_workout(workouts[0][2], activityName):
+          logging.info('Acivity name \'' + activityName + '\' written.')
+        else:
+          logging.error('Acivity name not written')
+  
     if activityType:
-        g.set_activity_type(workouts[0][2], activityType)
-        logging.info('Acivity type \'' + activityType + '\' written.')
-    else: 
-        logging.error('Acivity name not written')
+        if g.set_activity_type(workouts[0][2], activityType):
+          logging.info('Acivity type \'' + activityType + '\' written.')
+        else: 
+          logging.error('Acivity type not set')
 
 exit()
 

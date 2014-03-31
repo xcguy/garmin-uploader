@@ -33,6 +33,7 @@ import requests
 import time
 import re
 import logging
+from urllib import urlencode
 
 try:
     import simplejson
@@ -113,7 +114,6 @@ class UploadGarmin:
         time.sleep(wait_time)
         
         self._last_req_start = time.time()
-        #print("Rate limited for %f" % wait_time)
         logging.info("Rate limited for %f" % wait_time)
 
 
@@ -236,7 +236,22 @@ class UploadGarmin:
         else:
             mode = 'r'
 
-        files = {"data": (uploadFile, open(uploadFile, mode))}
+        # Garmin Connect web site does not comply with RFC 2231.
+        # urllib3 (used by the requests module) automatically detects non-ascii
+        # characters in filenames and generates the filename* header parameter
+        # (with asterisk - signifying that the filename has non-ascii characters)
+        # instead of the filename (without asterisk) header parameter.  Garmin
+        # Connect does not accept the asterisked version of filename and there
+        # is no way to tell urllib3 to not generate it.  The work-around for 
+        # Garmin's noncompliant behavior (sending non-ascii characters with the
+        # non-asterisked filename parameter) is to always send an ascii encodable 
+        # filename.  This is achieved by parsing out the non-ascii characters.
+        try:
+          uploadFileName = uploadFile.encode('ascii')
+        except UnicodeEncodeError:
+          uploadFileName = uploadFile.decode('ascii', 'ignore')
+
+        files = {"data": (uploadFileName, open(uploadFile, mode))}
         cookies = self._get_cookies()
         self._rate_limit()
         res = requests.post("http://connect.garmin.com/proxy/upload-service-1.1/json/upload/%s" % extension, files=files, cookies=cookies)
@@ -252,14 +267,19 @@ class UploadGarmin:
             return ['SUCCESS', res["successes"][0]["internalId"]]
 
     def name_workout(self, workout_id, workout_name):
+        encoding_headers = {"Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"} # GC really, really needs this part, otherwise it throws obscure errors like "Invalid signature for signature method HMAC-SHA1"
         cookies = self._get_cookies()
-        data = {"value": workout_name.decode("UTF-8").encode("UTF-8")}
+        #data = {"value": workout_name}
+        data=urlencode({"value": workout_name}).encode("UTF-8")
         self._rate_limit()
-        res = requests.post('http://connect.garmin.com/proxy/activity-service-1.0/json/name/%d' % (workout_id), data=data, cookies=cookies)
+        res = requests.post('http://connect.garmin.com/proxy/activity-service-1.0/json/name/%d' % (workout_id), data=data, cookies=cookies, headers=encoding_headers)
         res = res.json()["display"]["value"]
         
-        if res != workout_name:
-            raise Exception("Naming workout has failed")
+        if res == workout_name:
+          return True
+        else:
+          return False
+
 
     def set_activity_type(self, workout_id, activity_type):
         cookies = self._get_cookies()
@@ -269,7 +289,9 @@ class UploadGarmin:
         res = res.json()
         
         if "activityType" not in res or res["activityType"]["key"] != activity_type:
-            raise Exception("Unable to set activity type")
+          return False
+        else:
+          return True  
 
 
 
