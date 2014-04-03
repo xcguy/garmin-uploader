@@ -41,6 +41,11 @@ except ImportError:
     import json as simplejson
 import os.path
 
+activityTypes = ('running', 'cycling', 'mountain_biking', 'walking', 'hiking',
+                 'resort_skiing_snowboarding', 'cross_country_skiing', 
+                 'skating', 'swimming', 'rowing', 'elliptical', 
+                 'fitness_equipment', 'other')
+
 class ServiceExceptionScope:
     Account = "account"
     Service = "service"
@@ -100,9 +105,18 @@ class UploadGarmin:
     Handle operation to open to Garmin
     """
     def __init__(self, logLevel = 30):
+        self.rawHierarchy = requests.get("http://connect.garmin.com/proxy/activity-service-1.2/json/activity_types").text
+        self.activityHierarchy = simplejson.loads(self.rawHierarchy)["dictionary"]
         self._last_req_start = None
         self.cookies = None
-        logging.basicConfig(level=logLevel)
+        self.msgLogger = logging.getLogger(__name__)
+        self.msgLogger.setLevel(level=logLevel)
+        self.ch = logging.StreamHandler()
+        self.ch.setLevel(level=logLevel)
+        self.formatter = logging.Formatter('%(asctime)s::%(name)s::%(levelname)s::%(message)s')
+        self.ch.setFormatter(self.formatter)
+        self.msgLogger.addHandler(self.ch)
+        #logging.basicConfig(level=logLevel)
 
 
     def _rate_limit(self):
@@ -114,7 +128,7 @@ class UploadGarmin:
         time.sleep(wait_time)
         
         self._last_req_start = time.time()
-        logging.info("Rate limited for %f" % wait_time)
+        self.msgLogger.info("Rate limited for %f" % wait_time)
 
 
     def login(self, username, password):
@@ -258,10 +272,10 @@ class UploadGarmin:
         res = res.json()["detailedImportResult"]
 
         if len(res["successes"]) == 0:
-          if res["failures"][0]["messages"][0]['code'] == 202:
-            return ['EXISTS', res["failures"][0]["internalId"]]
-          else:
-            return ['FAIL', res["failures"][0]["messages"]]
+            if res["failures"][0]["messages"][0]['code'] == 202:
+                return ['EXISTS', res["failures"][0]["internalId"]]
+            else:
+                return ['FAIL', res["failures"][0]["messages"]]
         else:
             # Upload was successsful
             return ['SUCCESS', res["successes"][0]["internalId"]]
@@ -273,26 +287,54 @@ class UploadGarmin:
         data=urlencode({"value": workout_name}).encode("UTF-8")
         self._rate_limit()
         res = requests.post('http://connect.garmin.com/proxy/activity-service-1.0/json/name/%d' % (workout_id), data=data, cookies=cookies, headers=encoding_headers)
-        res = res.json()["display"]["value"]
-        
-        if res == workout_name:
-          return True
-        else:
-          return False
 
+        if res.status_code == 200:
+            res = res.json()["display"]["value"]
+            if res == workout_name:
+                self.msgLogger.info("Workout name set: %s" % workout_name)
+                return True
+            else:
+                self.msgLogger.error('Workout name not set: %s' % res)
+                return False
+        else:
+            self.msgLogger.error('Workout name not set')
+            return False
+
+
+    def _check_activity_type(self, activity_type):
+        ''' Fetch valid activity types from Garmin Connect,  compare the given
+            activity_type against the 'key' and 'display' values in the dictionary
+            of valid activities provided by the GC web site.  Returns the 'key'
+            which is used to 
+        '''
+        for activity in self.activityHierarchy:
+            if activity_type.lower() in (activity['key'], activity['display'].lower()):
+                self.msgLogger.info('Activity type found.  Using \'%s\' activity key.' % activity['key'])
+                return activity['key']
+        self.msgLogger.error("Activity type not found")
+        return False
 
     def set_activity_type(self, workout_id, activity_type):
+        activity_key = self._check_activity_type(activity_type)
+        if activity_key is None:
+            self.msgLogger.error("Activity type \'%s\' not valid" % activity_type)
+            return False
+        
         cookies = self._get_cookies()
         #data = {"value": activity_type.encode("UTF-8")}
         self._rate_limit()
-        res = requests.post("http://connect.garmin.com/proxy/activity-service-1.2/json/type/" + str(workout_id), data={"value": activity_type}, cookies=cookies)
-        res = res.json()
+        res = requests.post("http://connect.garmin.com/proxy/activity-service-1.2/json/type/" + str(workout_id), data={"value": activity_key}, cookies=cookies)
         
-        if "activityType" not in res or res["activityType"]["key"] != activity_type:
-          return False
+        if res.status_code == 200:
+            res = res.json()
+            if "activityType" not in res or res["activityType"]["key"] != activity_key:
+                self.msgLogger.error("Activity type not set")
+                return False
+            else:
+                self.msgLogger.info("Activity type set")
+                return True  
         else:
-          return True  
-
+            return False
 
 
 if __name__ == '__main__':
