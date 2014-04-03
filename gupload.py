@@ -96,7 +96,13 @@ logLevel = myargs.v[0]*10
 
 
 
-logging.basicConfig(level=logLevel)
+msgLogger = logging.getLogger(__name__)
+msgLogger.setLevel(level=logLevel)
+ch = logging.StreamHandler()
+ch.setLevel(level=logLevel)
+formatter = logging.Formatter('%(asctime)s::%(name)s::%(levelname)s::%(message)s')
+ch.setFormatter(formatter)
+msgLogger.addHandler(ch)
 
 if platform.system() == 'Windows':
     configFile='gupload.ini'
@@ -114,17 +120,17 @@ configCurrentDir=os.path.abspath(os.path.normpath('./' + configFile))
 configHomeDir=os.path.expanduser(os.path.normpath('~/' + configFile))
 
 if myargs.l:
-    logging.debug('Using credentials from command line.')
+    msgLogger.debug('Using credentials from command line.')
     username=myargs.l[0]
     password=myargs.l[1]
 elif os.path.isfile(configCurrentDir):
-    logging.debug('Using credentials from \'' + configCurrentDir + '\'.')
+    msgLogger.debug('Using credentials from \'%s\'.' % configCurrentDir)
     config=ConfigParser.RawConfigParser()
     config.read(configCurrentDir)
     username=config.get('Credentials', 'username')
     password=config.get('Credentials', 'password')
 elif os.path.isfile(configHomeDir):
-    logging.debug('Using credentials from \'' + configHomeDir + '\'.')
+    msgLogger.debug('Using credentials from \'%s\'.' % configHomeDir)
     config=ConfigParser.RawConfigParser()
     config.read(configHomeDir)
     username=config.get('Credentials', 'username')
@@ -132,7 +138,7 @@ elif os.path.isfile(configHomeDir):
 else:
     cwd = os.path.abspath(os.path.normpath('./'))
     homepath = os.path.expanduser(os.path.normpath('~/'))
-    logging.critical('\'' + configFile + '\' file does not exist in current directory (' + cwd + ') or home directory (' + homepath + ').  Use -l option.')
+    msgLogger.critical('\'%s\' file does not exist in current directory (%s) or home directory (%s).  Use -l option.' % (configFile, cwd, homepath))
     exit(1)
 
 def obscurePassword(password):
@@ -149,52 +155,56 @@ def obscurePassword(password):
         return(obscured)
 
 
-logging.debug('Username: ' + username)
-logging.debug('Password: ' + obscurePassword(password))
+msgLogger.debug('Username: ' + username)
+msgLogger.debug('Password: ' + obscurePassword(password))
 
 filenames=myargs.filename
 
-def checkFile(filename, fileList):
-    # checkFile - check to see if file exists, append to file list if exsists
-    logging.debug('Filename: ' + filename)
+def checkFile(filename):
+    # checkFile - check to see if file exists, return True 
+    # if exsists and file extension is good
+    msgLogger.debug('Filename: %s' % filename)
     if os.path.isfile(filename):
-        logging.debug('File exists.')
+        msgLogger.debug('File exists.')
 
         # Get file extension from name
         extension = os.path.splitext(filename)[1].lower()
-        logging.debug('File Extension: ' + extension)
+        msgLogger.debug('File Extension: %s' % extension)
 
         # Valid file extensions are .tcx, .fit, and .gpx
         if extension in ['.tcx', '.fit', '.gpx']:
-            logging.debug('File \'' + filename + '\' extension \'' + extension + '\' is valid.')
-            fileList.append([filename])
+            msgLogger.debug('File \'%s\' extension \'%s\' is valid.' % (filename, extension))
+            return True
         else: 
-            logging.warning('File \'' + filename + '\' extension \'' + extension + '\' is not valid. Skipping file...')
+            msgLogger.warning('File \'%s\' extension \'%s\' is not valid. Skipping file...' % (filename, extension))
+            return False
     else:
-        logging.warning('File \'' + filename + '\' does not exist. Skipping...')
+        msgLogger.warning('File \'%s\' does not exist. Skipping...' % filename)
+        return False
 
 # Check to see if files exist and if the file type is valid
 # Build a list of 'workouts' that includes the valid files
-# workout=[str filename, int workoutId, str status]
 workouts=[]
 for filename in filenames:
     if string.find(filename, '*') < 0:
-        checkFile(filename, workouts)
+        if checkFile(filename):
+            workouts.append(filename)
     else:
         # For Windows we have to expand wildcards ourself
         # Ubuntu Linux appears to do the expansion
         wildcards=glob.glob(filename)
         for wildcard in wildcards:
-            checkFile(wildcard, workouts)
+            if checkFile(wildcard):
+                workouts.append(wildcard)
 
 if len(workouts) == 0:
-    logging.critical('No valid Files.')
+    msgLogger.critical('No valid Files.')
     exit(1)
 
 if len(workouts)==1:
     if myargs.a:
         activityName=myargs.a[0]
-        logging.debug('Activity Name: ' + activityName)
+        msgLogger.debug('Activity Name: %s' % activityName)
     else:
         activityName = None
     if myargs.t:
@@ -207,33 +217,32 @@ g = UploadGarmin.UploadGarmin(logLevel=logLevel)
 
 # LOGIN
 if not g.login(username, password):
-    logging.critical('LOGIN FAILED - please verify your login credentials')
+    msgLogger.critical('LOGIN FAILED - please verify your login credentials')
     exit(1)
 else:
-    logging.info('Login Successful.')
+    msgLogger.info('Login Successful.')
 
     
 # UPLOAD files and append results (workout ID and status)
 # to each workout in 'workouts'
 for workout in workouts:
-    workout += g.upload_file(workout[0])
-    print 'File: ' + workout[0] + '    ID: ' + str(workout[2]) + '   Status: ' + workout[1]
-
+    status, id_msg = g.upload_file(workout)
+    print 'File: %s    ID: %s    Status: %s' % (workout, id_msg, status)
 
 # Name workout and/or set activity type. Only available for single file. 
 # Easier to name multiple files from the Garmin Connect site.
-if len(workouts) == 1 and workouts[0][1] == 'SUCCESS':
+if len(workouts) == 1 and status == 'SUCCESS':
     if activityName:
-        if g.name_workout(workouts[0][2], activityName):
-          logging.info('Acivity name \'' + activityName + '\' written.')
+        if g.name_workout(id_msg, activityName):
+            msgLogger.info('Activity name \'%s\' written.' % activityName)
         else:
-          logging.error('Acivity name not written')
+            msgLogger.error('Activity name not written')
   
     if activityType:
-        if g.set_activity_type(workouts[0][2], activityType):
-          logging.info('Acivity type \'' + activityType + '\' written.')
+        if g.set_activity_type(id_msg, activityType):
+            msgLogger.info('Activity type \'%s\' written.' % activityType)
         else: 
-          logging.error('Acivity type not set')
+            msgLogger.error('Activity type not set')
 
 exit()
 
