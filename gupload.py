@@ -33,6 +33,11 @@ import logging
 import platform
 import string
 import glob
+import csv
+from collections import namedtuple
+
+
+workoutTuple = namedtuple('workoutTuple', ['filename', 'name', 'type'])
 
 parser= argparse.ArgumentParser(
     formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -43,7 +48,7 @@ parser= argparse.ArgumentParser(
 	EXISTS.  Definitions are as follows: 
 
         SUCCESS = Garmin Connect indicated that the upload was successful.
-	FAIL = Garmin Connect indicated there was a problem with the upload.
+        FAIL = Garmin Connect indicated there was a problem with the upload.
         EXISTS = Garmin Connect indicated that the workout already exists in
                  your account.
 
@@ -74,6 +79,48 @@ parser= argparse.ArgumentParser(
         directory config file takes priority over a config file in the user's
         home directory.
 
+    CSV List Files:
+        A CSV (comma separated values) file can be created to associate files 
+        with filename and file type information.  Each record (line) in the csv
+        file consists of three fields (filename, name, type).  Fields are 
+        separated by commas, and text containing spaces or special characters
+        is quoted with double quotes (\").  Empty fields may be left blank, but
+        the field separators must be present.  THE FIRST LINE IN THE CSV FILE 
+        DEFINES THE ORDER OF THE FIELDS AND *MUST* CONTAIN THE KEY WORDS
+        \'filename\', \'name\', and \'type\'.  Most popular spreadsheet 
+        programs can save files in CSV format, or files can be easily 
+        constructed in your favorite text editor.
+        
+        Example \'file_list.csv\':
+            filename, name, type
+            file1.tcx, "10K race", running
+            file2.fit, "Training Run", running
+            file3.fit, , swimming
+        
+        Example \'file_list2.csv\' (note field order changed):
+            name, filename, type
+            "10K race", file1.tcx, running
+            "Training Run", file2.fit, running
+            , file3.fit, swimming
+            
+    Activity Types: 
+        The following list of activity types should be valid for setting 
+        your activity type on Garmin Connect...
+        
+        running, street_running, track_running, trail_running, 
+        treadmill_running, cycling, cyclocross, downhill_biking, indoor_cycling,
+        mountain_biking, recumbent_cycling, road_biking, track_cycling, 
+        fitness_equipment, elliptical, , indoor_cardio, indoor_rowing, 
+        stair_climbing, strength_training, hiking, swimming, lap_swimming, 
+        open_water_swimming, walking, casual_walking, speed_walking, transition,
+        swimToBikeTransition, bikeToRunTransition, runToBikeTransition, 
+        motorcycling, other, backcountry_skiing_snowboarding, boating, 
+        cross_country_skiing, driving_general, flying, golf, horseback_riding,
+        inline_skating, mountaineering, paddling, resort_skiing_snowboarding, 
+        rowing, sailing, skate_skiing, skating, snowmobiling, snow_shoe, 
+        stand_up_paddleboarding, whitewater_rafting_kayaking, wind_kite_surfing.
+        
+
     Examples:
         Upload file and set activty name:
             gupload.py -l myusername mypassword -a 'Run at park - 12/23' myfile.tcx
@@ -81,19 +128,24 @@ parser= argparse.ArgumentParser(
         Upload multiple files:
             gupload.py -l myusername mypassword myfile1.tcx myfile2.tcx myfile3.fit
 
+        Upload multiple files and set activity type for all to running:
+            gupload.py -l myusername mypassword -t "running" myfile1.tcx myfile2.tcx
+
+        Upload files using config file for credentials and csv list file:
+            gupload.py file_list.csv
+
         Upload file using config file for credentials, name file, verbose 
         output:
             gupload.py -v 1 -a 'Run at park - 12/23' myfile.tcx
     """)
-parser.add_argument('filename', type=str, nargs='+', help='Path and name of file(s) to upload.')
+parser.add_argument('filename', type=str, nargs='+', help='Path and name of file(s) to upload, list file name, or directory name containing fitness files.')
 parser.add_argument('-a', type=str, nargs=1, help='Sets the activity name for the upload file. This option is ignored if multiple upload files are given.')
-parser.add_argument('-t', type=str, nargs=1, help='Sets activity type. This option is ignored if multiple upload files are given.')
+parser.add_argument('-t', type=str, nargs=1, help='Sets activity type for ALL files in filename list, except files described inside a csv list file.')
 parser.add_argument('-l', type=str, nargs=2, help='Garmin Connect login credentials \'-l username password\'')
 parser.add_argument('-v', type=int, nargs=1, default=[3], choices=[1, 2, 3, 4, 5] , help='Verbose - select level of verbosity. 1=DEBUG(most verbose), 2=INFO, 3=WARNING, 4=ERROR, 5= CRITICAL(least verbose). [default=3]')
 
 myargs = parser.parse_args()
 logLevel = myargs.v[0]*10
-
 
 
 msgLogger = logging.getLogger(__name__)
@@ -103,6 +155,19 @@ ch.setLevel(level=logLevel)
 formatter = logging.Formatter('%(asctime)s::%(name)s::%(levelname)s::%(message)s')
 ch.setFormatter(formatter)
 msgLogger.addHandler(ch)
+
+
+if myargs.t:
+  activityType = myargs.t[0]
+else:
+  activityType = None
+
+if myargs.a:
+  activityName = myargs.a[0]
+else:
+  activityName = None
+
+
 
 if platform.system() == 'Windows':
     configFile='gupload.ini'
@@ -158,8 +223,6 @@ def obscurePassword(password):
 msgLogger.debug('Username: ' + username)
 msgLogger.debug('Password: ' + obscurePassword(password))
 
-filenames=myargs.filename
-
 def checkFile(filename):
     # checkFile - check to see if file exists, return True 
     # if exsists and file extension is good
@@ -172,7 +235,7 @@ def checkFile(filename):
         msgLogger.debug('File Extension: %s' % extension)
 
         # Valid file extensions are .tcx, .fit, and .gpx
-        if extension in ['.tcx', '.fit', '.gpx']:
+        if extension in UploadGarmin.VALID_GARMIN_FILE_EXTENSIONS:
             msgLogger.debug('File \'%s\' extension \'%s\' is valid.' % (filename, extension))
             return True
         else: 
@@ -182,67 +245,133 @@ def checkFile(filename):
         msgLogger.warning('File \'%s\' does not exist. Skipping...' % filename)
         return False
 
-# Check to see if files exist and if the file type is valid
-# Build a list of 'workouts' that includes the valid files
-workouts=[]
-for filename in filenames:
-    if string.find(filename, '*') < 0:
-        if checkFile(filename):
-            workouts.append(filename)
+def checkListFile(filename):
+    # checkFile - check to see if file exists, return True 
+    # if exsists and file extension is good
+    extension = os.path.splitext(filename)[1].lower()
+    if extension == '.csv' and os.path.isfile(filename):
+        msgLogger.info('List file \'%s\' will be processed...' % filename)
+        return True
     else:
-        # For Windows we have to expand wildcards ourself
-        # Ubuntu Linux appears to do the expansion
-        wildcards=glob.glob(filename)
-        for wildcard in wildcards:
-            if checkFile(wildcard):
-                workouts.append(wildcard)
+        return False
+
+fileArgs=myargs.filename
+
+# Sort out file names given on command line.  Figure out if they are fitness
+# file names, directory names containing fitness files, or names of csv file 
+# lists.  Also, expand file name wildcards, if necessary.  Check to see if 
+# files exist and if the file extension is valid.  Build lists of fitnes 
+# filenames, directories # which will be further searched for files, and 
+# list files.
+filenames=[]
+dirnames=[]
+listfiles=[]
+for fileArg in fileArgs:
+    if os.path.isdir(fileArg):
+        dirnames.append(os.path.abspath(fileArg))
+    elif checkListFile(fileArg):
+        listfiles.append(fileArg)
+    else:
+        if string.find(fileArg, '*') < 0:
+            if checkFile(fileArg):
+                filenames.append(fileArg)
+        else:
+            # For Windows we have to expand wildcards ourself
+            # Ubuntu Linux appears to do the expansion
+            wildcards=glob.glob(fileArg)
+            for wildcard in wildcards:
+                if checkFile(wildcard):
+                    filenames.append(wildcard)
+
+# Add files from directories given in filename list
+for dirname in dirnames:
+    for filename in os.listdir(dirname):
+        extension = os.path.splitext(filename)[1].lower()
+        filename = os.path.abspath(dirname + '/' + filename)
+        if checkFile(filename):
+            filenames.append(filename)
+        elif checkListFile(filename):
+            listfiles.append(filename)
+
+
+# Activity name given on command line only applies if a single filename 
+# is given.  Otherwise, ignore.
+if len(filenames) != 1 and activityName:
+    msgLogger.warning('-a option valid only when one fitness file given.  Ignoring -a option.')
+    activityName = None
+
+workouts = []
+
+# Build workout tuples - a workoutTuple has a filename, name, and file type
+for filename in filenames:
+    workouts.append(workoutTuple(filename=filename, name=activityName, type=activityType))
+
+# # Activity name given on command line only applies if a single filename 
+# # is given.  Otherwise, ignore.
+# if len(workouts)!=1 and activityName:
+#     activityName=None
+#     msgLogger.debug('Activity Name: %s' % activityName)
+
+# Pull in file info from csv files and apend tuples to list
+for listfile in listfiles:
+    with open(listfile, 'rb') as csvfile:
+        reader = csv.DictReader(csvfile)
+        for row in reader:
+            if checkFile(row['filename']):
+                workouts.append(workoutTuple(filename=row['filename'], name=row['name'], type=row['type']))
 
 if len(workouts) == 0:
     msgLogger.critical('No valid Files.')
-    exit(1)
+    raise(IOError('No valid files.'))
 
-if len(workouts)==1:
-    if myargs.a:
-        activityName=myargs.a[0]
-        msgLogger.debug('Activity Name: %s' % activityName)
-    else:
-        activityName = None
-    if myargs.t:
-        activityType=myargs.t[0]
-    else:
-        activityType = None
 
 # Create object
 g = UploadGarmin.UploadGarmin(logLevel=logLevel)
 
 # LOGIN
 if not g.login(username, password):
-    msgLogger.critical('LOGIN FAILED - please verify your login credentials')
-    exit(1)
+    msg = 'LOGIN FAILED - please verify your login credentials'
+    msgLogger.critical(msg)
+    raise(IOError(msg))
 else:
     msgLogger.info('Login Successful.')
 
-    
-# UPLOAD files and append results (workout ID and status)
-# to each workout in 'workouts'
-for workout in workouts:
-    status, id_msg = g.upload_file(workout)
-    print 'File: %s    ID: %s    Status: %s' % (workout, id_msg, status)
 
-# Name workout and/or set activity type. Only available for single file. 
-# Easier to name multiple files from the Garmin Connect site.
-if len(workouts) == 1 and status == 'SUCCESS':
-    if activityName:
-        if g.name_workout(id_msg, activityName):
-            msgLogger.info('Activity name \'%s\' written.' % activityName)
-        else:
-            msgLogger.error('Activity name not written')
-  
-    if activityType:
-        if g.set_activity_type(id_msg, activityType):
-            msgLogger.info('Activity type \'%s\' written.' % activityType)
-        else: 
-            msgLogger.error('Activity type not set')
+# UPLOAD files.  Set description and file type if specified.
+for workout in workouts:
+    status, id_msg = g.upload_file(workout.filename)
+    nstat = 'N/A'
+    tstat = 'N/A'
+    if status == 'SUCCESS':
+        if workout.name:
+            if g.set_workout_name(id_msg, workout.name):
+                nstat = workout.name
+            else:
+                nstat = 'FAIL!'
+
+        if workout.type:
+            if g.set_activity_type(id_msg, workout.type):
+                tstat =  workout.type
+            else:
+                tstat =  'FAIL!'
+        
+    print 'File: %s    ID: %s    Status: %s    Name: %s    Type: %s' % \
+                              (workout.filename, id_msg, status, nstat, tstat)
+
+# # Name workout and/or set activity type. Only available for single file. 
+# # Easier to name multiple files from the Garmin Connect site.
+# if len(workouts) == 1 and status == 'SUCCESS':
+#     if activityName:
+#         if g.name_workout(id_msg, activityName):
+#             msgLogger.info('Activity name \'%s\' written.' % activityName)
+#         else:
+#             msgLogger.error('Activity name not written')
+#   
+#     if activityType:
+#         if g.set_activity_type(id_msg, activityType):
+#             msgLogger.info('Activity type \'%s\' written.' % activityType)
+#         else: 
+#             msgLogger.error('Activity type not set')
 
 exit()
 

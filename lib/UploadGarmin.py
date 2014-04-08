@@ -41,6 +41,9 @@ except ImportError:
     import json as simplejson
 import os.path
 
+VALID_GARMIN_FILE_EXTENSIONS = ('.tcx', '.fit', '.gpx')
+BINARY_FILE_FORMATS = ('.fit',)
+
 activityTypes = ('running', 'cycling', 'mountain_biking', 'walking', 'hiking',
                  'resort_skiing_snowboarding', 'cross_country_skiing', 
                  'skating', 'swimming', 'rowing', 'elliptical', 
@@ -242,10 +245,10 @@ class UploadGarmin:
         extension = os.path.splitext(uploadFile)[1].lower()
 
         # Valid File extensions are .tcx, .fit, and .gpx
-        if extension not in ['.tcx', '.fit', '.gpx']:
+        if extension not in VALID_GARMIN_FILE_EXTENSIONS:
             raise Exception("Invalid File Extension")
 
-        if extension == '.fit':
+        if extension in BINARY_FILE_FORMATS:
             mode = 'rb'
         else:
             mode = 'r'
@@ -280,7 +283,7 @@ class UploadGarmin:
             # Upload was successsful
             return ['SUCCESS', res["successes"][0]["internalId"]]
 
-    def name_workout(self, workout_id, workout_name):
+    def set_workout_name(self, workout_id, workout_name):
         encoding_headers = {"Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"} # GC really, really needs this part, otherwise it throws obscure errors like "Invalid signature for signature method HMAC-SHA1"
         cookies = self._get_cookies()
         #data = {"value": workout_name}
@@ -299,6 +302,11 @@ class UploadGarmin:
         else:
             self.msgLogger.error('Workout name not set')
             return False
+
+    # This for API backward compatability
+    def name_workout(self, workout_id, workout_name):
+        self.msgLogger.warning('name_workout method deprecated. Use set_workout_name instead.')
+        return self.set_workout_name(workout_id, workout_name)
 
 
     def _check_activity_type(self, activity_type):
