@@ -313,7 +313,7 @@ class UploadGarmin:
         ''' Fetch valid activity types from Garmin Connect,  compare the given
             activity_type against the 'key' and 'display' values in the dictionary
             of valid activities provided by the GC web site.  Returns the 'key'
-            which is used to 
+            which is used to set activity type throught the web API.
         '''
         for activity in self.activityHierarchy:
             if activity_type.lower() in (activity['key'], activity['display'].lower()):

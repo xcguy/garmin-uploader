@@ -267,31 +267,29 @@ filenames=[]
 dirnames=[]
 listfiles=[]
 for fileArg in fileArgs:
-    if os.path.isdir(fileArg):
-        dirnames.append(os.path.abspath(fileArg))
-    elif checkListFile(fileArg):
-        listfiles.append(fileArg)
-    else:
-        if string.find(fileArg, '*') < 0:
-            if checkFile(fileArg):
-                filenames.append(fileArg)
-        else:
-            # For Windows we have to expand wildcards ourself
-            # Ubuntu Linux appears to do the expansion
-            wildcards=glob.glob(fileArg)
-            for wildcard in wildcards:
-                if checkFile(wildcard):
-                    filenames.append(wildcard)
+    # Expand any wildcards that may have been passed in if the OS hasn't already
+    wildcards = glob.glob(fileArg)
+    for wildcard in wildcards:
+        # Check for valid fitness file 
+        if checkFile(fileArg):
+            filenames.append(fileArg)
+        # Check for valid list file 
+        elif checkListFile(wildcard):
+            listfiles.append(wildcard)
+        # Check for directory - will search for files in directories next
+        elif os.path.isdir(wildcard):
+            dirnames.append(os.path.abspath(wildcard))
 
-# Add files from directories given in filename list
+
+# Add fitness files from directories given in in command line arg list.  
+# - Does not recursively drill into directories.  
+# - Does not search for csv files in directories. 
 for dirname in dirnames:
     for filename in os.listdir(dirname):
         extension = os.path.splitext(filename)[1].lower()
-        filename = os.path.abspath(dirname + '/' + filename)
+        filename = os.path.join(dirname, filename)
         if checkFile(filename):
             filenames.append(filename)
-        elif checkListFile(filename):
-            listfiles.append(filename)
 
 
 # Activity name given on command line only applies if a single filename 
@@ -306,12 +304,6 @@ workouts = []
 for filename in filenames:
     workouts.append(workoutTuple(filename=filename, name=activityName, type=activityType))
 
-# # Activity name given on command line only applies if a single filename 
-# # is given.  Otherwise, ignore.
-# if len(workouts)!=1 and activityName:
-#     activityName=None
-#     msgLogger.debug('Activity Name: %s' % activityName)
-
 # Pull in file info from csv files and apend tuples to list
 for listfile in listfiles:
     with open(listfile, 'rb') as csvfile:
@@ -319,6 +311,7 @@ for listfile in listfiles:
         for row in reader:
             if checkFile(row['filename']):
                 workouts.append(workoutTuple(filename=row['filename'], name=row['name'], type=row['type']))
+
 
 if len(workouts) == 0:
     msgLogger.critical('No valid Files.')
@@ -343,12 +336,13 @@ for workout in workouts:
     nstat = 'N/A'
     tstat = 'N/A'
     if status == 'SUCCESS':
+        # Set workout name if specified
         if workout.name:
             if g.set_workout_name(id_msg, workout.name):
                 nstat = workout.name
             else:
                 nstat = 'FAIL!'
-
+        # Set workout type if specified
         if workout.type:
             if g.set_activity_type(id_msg, workout.type):
                 tstat =  workout.type
