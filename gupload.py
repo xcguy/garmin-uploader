@@ -157,6 +157,8 @@ ch.setFormatter(formatter)
 msgLogger.addHandler(ch)
 
 
+fileArgs=myargs.filename
+
 if myargs.t:
   activityType = myargs.t[0]
 else:
@@ -255,9 +257,7 @@ def checkListFile(filename):
     else:
         return False
 
-fileArgs=myargs.filename
-
-# Sort out file names given on command line.  Figure out if they are fitness
+# Sort out file name args given on command line.  Figure out if they are fitness
 # file names, directory names containing fitness files, or names of csv file 
 # lists.  Also, expand file name wildcards, if necessary.  Check to see if 
 # files exist and if the file extension is valid.  Build lists of fitnes 
