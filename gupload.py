@@ -31,7 +31,6 @@ import os.path
 import ConfigParser
 import logging
 import platform
-import string
 import glob
 import csv
 from collections import namedtuple
@@ -351,21 +350,6 @@ for workout in workouts:
         
     print 'File: %s    ID: %s    Status: %s    Name: %s    Type: %s' % \
                               (workout.filename, id_msg, status, nstat, tstat)
-
-# # Name workout and/or set activity type. Only available for single file. 
-# # Easier to name multiple files from the Garmin Connect site.
-# if len(workouts) == 1 and status == 'SUCCESS':
-#     if activityName:
-#         if g.name_workout(id_msg, activityName):
-#             msgLogger.info('Activity name \'%s\' written.' % activityName)
-#         else:
-#             msgLogger.error('Activity name not written')
-#   
-#     if activityType:
-#         if g.set_activity_type(id_msg, activityType):
-#             msgLogger.info('Activity type \'%s\' written.' % activityType)
-#         else: 
-#             msgLogger.error('Activity type not set')
 
 exit()
 
