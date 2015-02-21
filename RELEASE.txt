@@ -2,6 +2,19 @@
 RELEASE:
 Garmin Connect Python Uploader Release Notes:
 
+Release 2015.02.21:
+  Comments:
+  Garmin Connect has made some changes whic has broken login again.  Some 
+  features have been added to allow setting of activity type, and multiple 
+  file upload,
+  
+  Changes:
+  1) fix broken login (change URLs from http: to https:)
+  2) add feature to set activity type 
+  3) add feature to upload multiple files
+  4) add feature to upload miltiple files specified in csv file
+ 
+  
 Release 2014.03.01:
   Comments:
   Garmin Connect completley chaged their login authentication scheme rendering

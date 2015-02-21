@@ -108,7 +108,7 @@ class UploadGarmin:
     Handle operation to open to Garmin
     """
     def __init__(self, logLevel = 30):
-        self.rawHierarchy = requests.get("http://connect.garmin.com/proxy/activity-service-1.2/json/activity_types").text
+        self.rawHierarchy = requests.get("https://connect.garmin.com/proxy/activity-service-1.2/json/activity_types").text
         self.activityHierarchy = simplejson.loads(self.rawHierarchy)["dictionary"]
         self._last_req_start = None
         self.cookies = None
@@ -149,7 +149,7 @@ class UploadGarmin:
             raise APIException("Username and/or password missing")
 
         self._rate_limit()
-        gcPreResp = requests.get("http://connect.garmin.com/", allow_redirects=False)
+        gcPreResp = requests.get("https://connect.garmin.com/", allow_redirects=False)
         # New site gets this redirect, old one does not
         if gcPreResp.status_code == 200:
             self._rate_limit()
@@ -186,7 +186,7 @@ class UploadGarmin:
                 # "displayNameRequired": "false"
             }
             params = {
-                "service": "http://connect.garmin.com/post-auth/login",
+                "service": "https://connect.garmin.com/post-auth/login",
                 # "redirectAfterAccountLoginUrl": "http://connect.garmin.com/post-auth/login",
                 # "redirectAfterAccountCreationUrl": "http://connect.garmin.com/post-auth/login",
                 # "webhost": "olaxpw-connect00.garmin.com",
@@ -224,7 +224,7 @@ class UploadGarmin:
             # ...AND WE'RE NOT DONE YET!
 
             self._rate_limit()
-            gcRedeemResp1 = requests.get("http://connect.garmin.com/post-auth/login", params={"ticket": ticket}, allow_redirects=False, cookies=gcPreResp.cookies)
+            gcRedeemResp1 = requests.get("https://connect.garmin.com/post-auth/login", params={"ticket": ticket}, allow_redirects=False, cookies=gcPreResp.cookies)
             if gcRedeemResp1.status_code != 302:
                 raise APIException("GC redeem 1 error %s %s" % (gcRedeemResp1.status_code, gcRedeemResp1.text))
 
@@ -271,7 +271,7 @@ class UploadGarmin:
         files = {"data": (uploadFileName, open(uploadFile, mode))}
         cookies = self._get_cookies()
         self._rate_limit()
-        res = requests.post("http://connect.garmin.com/proxy/upload-service-1.1/json/upload/%s" % extension, files=files, cookies=cookies)
+        res = requests.post("https://connect.garmin.com/proxy/upload-service-1.1/json/upload/%s" % extension, files=files, cookies=cookies)
         res = res.json()["detailedImportResult"]
 
         if len(res["successes"]) == 0:
@@ -289,7 +289,7 @@ class UploadGarmin:
         #data = {"value": workout_name}
         data=urlencode({"value": workout_name}).encode("UTF-8")
         self._rate_limit()
-        res = requests.post('http://connect.garmin.com/proxy/activity-service-1.0/json/name/%d' % (workout_id), data=data, cookies=cookies, headers=encoding_headers)
+        res = requests.post('https://connect.garmin.com/proxy/activity-service-1.0/json/name/%d' % (workout_id), data=data, cookies=cookies, headers=encoding_headers)
 
         if res.status_code == 200:
             res = res.json()["display"]["value"]
@@ -331,7 +331,7 @@ class UploadGarmin:
         cookies = self._get_cookies()
         #data = {"value": activity_type.encode("UTF-8")}
         self._rate_limit()
-        res = requests.post("http://connect.garmin.com/proxy/activity-service-1.2/json/type/" + str(workout_id), data={"value": activity_key}, cookies=cookies)
+        res = requests.post("https://connect.garmin.com/proxy/activity-service-1.2/json/type/" + str(workout_id), data={"value": activity_key}, cookies=cookies)
         
         if res.status_code == 200:
             res = res.json()
