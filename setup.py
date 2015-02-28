@@ -13,7 +13,7 @@ except ImportError:
 
 setup(
 	name = "GcpUploader",
-	version = "2015.02.21.3",
+	version = "2015.02.28",
 	author = "David E. Lotton",
 	author_email = "yellow56@gmail.com",
 	description = "A tool to upload FIT, GPX, and TCX files to the Garmin Connect web site.",

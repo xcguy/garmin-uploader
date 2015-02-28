@@ -92,7 +92,7 @@ class gupload():
       self.msgLogger.debug('Using credentials from command line.')
       self.username=myargs.l[0]
       self.password=myargs.l[1]
-    elif os.path.isfile(self.configCurrentDir):
+    elif os.path.isfile(configCurrentDir):
       self.msgLogger.debug('Using credentials from \'%s\'.' % configCurrentDir)
       config=ConfigParser.RawConfigParser()
       config.read(configCurrentDir)
