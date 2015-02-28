@@ -2,7 +2,7 @@
 RELEASE:
 Garmin Connect Python Uploader Release Notes:
 
-Release 2015.02.21:
+Release 2015.02.28:
   Comments:
   Error when using credentials from a config file caused by incorrect 
   variable name in gupload.py.  This was caused in the major rearrangement
