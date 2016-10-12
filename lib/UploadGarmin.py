@@ -224,14 +224,9 @@ class UploadGarmin:
             # ...AND WE'RE NOT DONE YET!
 
             self._rate_limit()
-            gcRedeemResp1 = requests.get("https://connect.garmin.com/post-auth/login", params={"ticket": ticket}, allow_redirects=False, cookies=gcPreResp.cookies)
-            if gcRedeemResp1.status_code != 302:
-                raise APIException("GC redeem 1 error %s %s" % (gcRedeemResp1.status_code, gcRedeemResp1.text))
-
-            self._rate_limit()
-            gcRedeemResp2 = requests.get(gcRedeemResp1.headers["location"], cookies=gcPreResp.cookies, allow_redirects=False)
-            if gcRedeemResp2.status_code != 302:
-                raise APIException("GC redeem 2 error %s %s" % (gcRedeemResp2.status_code, gcRedeemResp2.text))
+            gcRedeemResp = requests.get("https://connect.garmin.com/post-auth/login", params={"ticket": ticket}, cookies=gcPreResp.cookies)
+            if not gcRedeemResp.ok:
+                raise APIException("GC redeem 1 error %s %s" % (gcRedeemResp.status_code, gcRedeemResp.text))
 
         else:
             raise APIException("Unknown GC prestart response %s %s" % (gcPreResp.status_code, gcPreResp.text))
@@ -271,14 +266,20 @@ class UploadGarmin:
         files = {"data": (uploadFileName, open(uploadFile, mode))}
         cookies = self._get_cookies()
         self._rate_limit()
-        res = requests.post("https://connect.garmin.com/proxy/upload-service-1.1/json/upload/%s" % extension, files=files, cookies=cookies)
+        url = "https://connect.garmin.com/proxy/upload-service-1.1/json/upload/%s" % extension
+        res = requests.post(url, files=files, cookies=cookies)
+        if not res.ok:
+            raise Exception('Failed to upload {}'.format(uploadFile))
         res = res.json()["detailedImportResult"]
 
         if len(res["successes"]) == 0:
-            if res["failures"][0]["messages"][0]['code'] == 202:
-                return ['EXISTS', res["failures"][0]["internalId"]]
+            if len(res["failures"]) > 0:
+                if res["failures"][0]["messages"][0]['code'] == 202:
+                    return ['EXISTS', res["failures"][0]["internalId"]]
+                else:
+                    return ['FAIL', res["failures"][0]["messages"]]
             else:
-                return ['FAIL', res["failures"][0]["messages"]]
+                return ['FAIL', 'Unknown error']
         else:
             # Upload was successsful
             return ['SUCCESS', res["successes"][0]["internalId"]]
