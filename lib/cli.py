@@ -43,12 +43,10 @@ class gupload():
                 on the Garmin Connect web site.
   '''
 
-  def __init__(self, myargs):
+  def __init__(self, options):
     ''' Init logger, parse command line arguments, parse config files
     '''
-    self.myargs = myargs
-
-    self.logLevel = myargs.v[0]*10
+    self.logLevel = options.verbose * 10
 
     self.msgLogger = logging.getLogger(__name__)
     self.msgLogger.setLevel(level=self.logLevel)
@@ -59,17 +57,9 @@ class gupload():
     self.msgLogger.addHandler(self.ch)
 
 
-    self.fileArgs=myargs.filename
-
-    if myargs.t:
-      self.activityType = myargs.t[0]
-    else:
-      self.activityType = None
-
-    if myargs.a:
-      self.activityName = myargs.a[0]
-    else:
-      self.activityName = None
+    self.paths = options.paths
+    self.activityType = options.type
+    self.activityName = options.name
 
 
     if platform.system() == 'Windows':
@@ -88,10 +78,10 @@ class gupload():
     configCurrentDir=os.path.abspath(os.path.normpath('./' + configFile))
     configHomeDir=os.path.expanduser(os.path.normpath('~/' + configFile))
 
-    if myargs.l:
+    if options.username and options.password:
       self.msgLogger.debug('Using credentials from command line.')
-      self.username=myargs.l[0]
-      self.password=myargs.l[1]
+      self.username=options.username
+      self.password=options.password
     elif os.path.isfile(configCurrentDir):
       self.msgLogger.debug('Using credentials from \'%s\'.' % configCurrentDir)
       config=ConfigParser.RawConfigParser()
@@ -179,7 +169,7 @@ class gupload():
     filenames=[]
     dirnames=[]
     listfiles=[]
-    for fileArg in self.fileArgs:
+    for fileArg in self.paths:
       # Expand any wildcards that may have been passed in if the OS hasn't already
       wildcards = glob.glob(fileArg)
       for wildcard in wildcards:
@@ -275,38 +265,44 @@ if __name__ == '__main__':
   )
 
   parser.add_argument(
-      'filename',
+      'paths',
       type=str,
       nargs='+',
       help='Path and name of file(s) to upload, list file name, or directory name containing fitness files.')
   parser.add_argument(
       '-a',
+      '--name',
+      dest='name',
       type=str,
-      nargs=1,
       help='Sets the activity name for the upload file. This option is ignored if multiple upload files are given.')
   parser.add_argument(
       '-t',
+      '--type',
+      dest='type',
       type=str,
-      nargs=1,
       help='Sets activity type for ALL files in filename list, except files described inside a csv list file.')
   parser.add_argument(
-      '-l',
+      '-u',
+      '--username',
+      dest='username',
       type=str,
-      nargs=2,
-      help='Garmin Connect login credentials \'-l username password\'')
+      help='Garmin Connect user login')
+  parser.add_argument(
+      '-p',
+      '--password',
+      dest='password',
+      type=str,
+      help='Garmin Connect user password')
   parser.add_argument(
       '-v',
+      '--verbose',
+      dest='verbose',
       type=int,
-      nargs=1,
-      default=[3],
+      default=3,
       choices=[1, 2, 3, 4, 5] ,
       help='Verbose - select level of verbosity. 1=DEBUG(most verbose), 2=INFO, 3=WARNING, 4=ERROR, 5= CRITICAL(least verbose). [default=3]')
 
-  myargs = parser.parse_args()
+  options = parser.parse_args()
 
-  g = gupload(myargs)
-
+  g = gupload(options)
   g.gupload()
-
-
-
