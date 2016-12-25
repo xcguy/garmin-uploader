@@ -298,7 +298,7 @@ class UploadGarmin:
         encoding_headers = {"Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"} # GC really, really needs this part, otherwise it throws obscure errors like "Invalid signature for signature method HMAC-SHA1"
         self.authenticate()
         #data = {"value": workout_name}
-        data=urlencode({"value": workout_name}).encode("UTF-8")
+        data = urlencode({"value": workout_name}).encode("UTF-8")
         self._rate_limit()
         res = self.session.post('https://connect.garmin.com/proxy/activity-service-1.0/json/name/%d' % (workout_id), data=data, headers=encoding_headers)
 

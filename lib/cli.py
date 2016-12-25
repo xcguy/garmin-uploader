@@ -47,10 +47,11 @@ class gupload():
     '''
     logger.setLevel(level=options.verbose * 10)
 
-    self.paths = options.paths
     self.activityType = options.type
     self.activityName = options.name
 
+
+    self.workouts = self.load_activities(options.paths)
 
 
     # ---- GC login credential order of precedence ----
@@ -60,25 +61,25 @@ class gupload():
     #
     # Command line overrides all, config in cwd overrides config in home dir
     #
-    configCurrentDir=os.path.abspath(os.path.normpath('./' + CONFIG_FILE))
-    configHomeDir=os.path.expanduser(os.path.normpath('~/' + CONFIG_FILE))
+    configCurrentDir = os.path.abspath(os.path.normpath('./' + CONFIG_FILE))
+    configHomeDir = os.path.expanduser(os.path.normpath('~/' + CONFIG_FILE))
 
     if options.username and options.password:
       logger.debug('Using credentials from command line.')
-      self.username=options.username
-      self.password=options.password
+      self.username = options.username
+      self.password = options.password
     elif os.path.isfile(configCurrentDir):
       logger.debug('Using credentials from \'%s\'.' % configCurrentDir)
-      config=ConfigParser.RawConfigParser()
+      config = ConfigParser.RawConfigParser()
       config.read(configCurrentDir)
-      self.username=config.get('Credentials', 'username')
-      self.password=config.get('Credentials', 'password')
+      self.username = config.get('Credentials', 'username')
+      self.password = config.get('Credentials', 'password')
     elif os.path.isfile(configHomeDir):
       logger.debug('Using credentials from \'%s\'.' % configHomeDir)
-      config=ConfigParser.RawConfigParser()
+      config = ConfigParser.RawConfigParser()
       config.read(configHomeDir)
-      self.username=config.get('Credentials', 'username')
-      self.password=config.get('Credentials', 'password')
+      self.username = config.get('Credentials', 'username')
+      self.password = config.get('Credentials', 'password')
     else:
       cwd = os.path.abspath(os.path.normpath('./'))
       homepath = os.path.expanduser(os.path.normpath('~/'))
@@ -86,53 +87,10 @@ class gupload():
       logger.critical(msg)
       raise IOError(msg)
 
-
-  def obscurePassword(self, password):
-    ''' Obscure password for the purpose of logging output '''
-    return '*' * len(password)
-
-  def checkFile(self, filename):
-    ''' checkFile - check to see if file exists and that the extension is a
-        valid fitness file accepted by GC.
-    '''
-    logger.debug('Filename: %s' % filename)
-    if os.path.isfile(filename):
-      logger.debug('File exists.')
-
-      # Get file extension from name
-      extension = os.path.splitext(filename)[1].lower()
-      logger.debug('File Extension: %s' % extension)
-
-      # Valid file extensions are .tcx, .fit, and .gpx
-      if extension in uploader.VALID_GARMIN_FILE_EXTENSIONS:
-        logger.debug('File \'%s\' extension \'%s\' is valid.' % (filename, extension))
-        return True
-      else:
-        logger.warning('File \'%s\' extension \'%s\' is not valid. Skipping file...' % (filename, extension))
-        return False
-    else:
-      logger.warning('File \'%s\' does not exist. Skipping...' % filename)
-      return False
-
-  def checkListFile(self, filename):
-    ''' checkListFile - check to see if file exists and that the file
-        extension is .csv
-    '''
-    extension = os.path.splitext(filename)[1].lower()
-    if extension == '.csv' and os.path.isfile(filename):
-      logger.info('List file \'%s\' will be processed...' % filename)
-      return True
-    else:
-      return False
-
-  def gupload(self):
-    ''' gupload - This does the work, building a list of files to upload
-        based on command line filename args, wildcard expansion, and list file
-        expansion.  It uploads files and sets activity name and activity type.
-    '''
-    logger.debug('Username: ' + self.username)
-    logger.debug('Password: ' + self.obscurePassword(self.password))
-
+  def load_activities(self, paths):
+    """
+    Load all activities files
+    """
     # Sort out file name args given on command line.  Figure out if they are fitness
     # file names, directory names containing fitness files, or names of csv file
     # lists.  Also, expand file name wildcards, if necessary.  Check to see if
@@ -140,34 +98,52 @@ class gupload():
     # filenames, directories # which will be further searched for files, and
     # list files.
 
-    filenames=[]
-    dirnames=[]
-    listfiles=[]
-    for fileArg in self.paths:
-      # Expand any wildcards that may have been passed in if the OS hasn't already
-      wildcards = glob.glob(fileArg)
-      for wildcard in wildcards:
-        # Check for valid fitness file
-        if self.checkFile(fileArg):
-          filenames.append(fileArg)
-        # Check for valid list file
-        elif self.checkListFile(wildcard):
-          listfiles.append(wildcard)
-        # Check for directory - will search for files in directories next
-        elif os.path.isdir(wildcard):
-          dirnames.append(os.path.abspath(wildcard))
+    def is_csv(filename):
+      '''
+      check to see if file exists and that the file
+      extension is .csv
+      '''
+      extension = os.path.splitext(filename)[1].lower()
+      return extension == '.csv' and os.path.isfile(filename)
 
+    def is_activity(filename):
+      '''
+      check to see if file exists and that the extension is a
+      valid activity file accepted by GC.
+      '''
+      if not os.path.isfile(filename):
+        logger.warning("File '{}' does not exist. Skipping...".format(filename))
+        return False
 
-    # Add fitness files from directories given in in command line arg list.
-    # - Does not recursively drill into directories.
-    # - Does not search for csv files in directories.
-    for dirname in dirnames:
-      for filename in os.listdir(dirname):
-        #extension = os.path.splitext(filename)[1].lower()
-        filename = os.path.join(dirname, filename)
-        if self.checkFile(filename):
-          filenames.append(filename)
+      # Get file extension from name
+      extension = os.path.splitext(filename)[1].lower()
+      logger.debug("File '{}' has extension '{}'".format(filename, extension))
 
+      # Valid file extensions are .tcx, .fit, and .gpx
+      if extension in uploader.VALID_GARMIN_FILE_EXTENSIONS:
+        logger.debug("File '{}' extension '{}' is valid.".format(filename, extension))
+        return True
+      else:
+        logger.warning("File '{}' extension '{}' is not valid. Skipping file...".format(filename, extension))
+        return False
+
+    filenames, listfiles = [], []
+    for path in paths:
+      path = os.path.realpath(path)
+      if is_activity(path):
+        # Use file directly
+        filenames.append(path)
+
+      elif is_csv(path):
+        # Use file directly
+        logger.info("List file '{}' will be processed...".format(path))
+        filenames.append(path)
+
+      elif os.path.isdir(path):
+        # Use files in directory
+        # - Does not recursively drill into directories.
+        # - Does not search for csv files in directories.
+        filenames += [f for f in glob.glob(os.path.join(path, '*')) if is_activity(f)]
 
     # Activity name given on command line only applies if a single filename
     # is given.  Otherwise, ignore.
@@ -194,6 +170,16 @@ class gupload():
       logger.critical('No valid Files.')
       raise(IOError('No valid files.'))
 
+    return workouts
+
+
+  def gupload(self):
+    ''' gupload - This does the work, building a list of files to upload
+        based on command line filename args, wildcard expansion, and list file
+        expansion.  It uploads files and sets activity name and activity type.
+    '''
+    logger.debug('Username: {}'.format(self.username))
+    logger.debug('Password: {}'.format('*'*len(self.password)))
 
     # Create object
     g = uploader.UploadGarmin()
@@ -208,7 +194,7 @@ class gupload():
 
 
     # UPLOAD files.  Set description and file type if specified.
-    for workout in workouts:
+    for workout in self.workouts:
       status, id_msg = g.upload_file(workout.filename)
       nstat = 'N/A'
       tstat = 'N/A'
