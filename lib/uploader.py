@@ -32,8 +32,8 @@ Handle the operation to upload to the Garmin Connect Website.
 import requests
 import time
 import re
-import logging
 from urllib import urlencode
+from . import logger
 
 try:
     import simplejson
@@ -120,14 +120,6 @@ class UploadGarmin:
         self.rawHierarchy = requests.get("https://connect.garmin.com/proxy/activity-service-1.2/json/activity_types").text
         self.activityHierarchy = simplejson.loads(self.rawHierarchy)["dictionary"]
         self._last_req_start = None
-        self.msgLogger = logging.getLogger(__name__)
-        self.msgLogger.setLevel(level=logLevel)
-        self.ch = logging.StreamHandler()
-        self.ch.setLevel(level=logLevel)
-        self.formatter = logging.Formatter('%(asctime)s::%(name)s::%(levelname)s::%(message)s')
-        self.ch.setFormatter(self.formatter)
-        self.msgLogger.addHandler(self.ch)
-        #logging.basicConfig(level=logLevel)
 
         # Use same user agent in every request
         self.session = requests.Session()
@@ -147,7 +139,7 @@ class UploadGarmin:
         time.sleep(wait_time)
 
         self._last_req_start = time.time()
-        self.msgLogger.info("Rate limited for %f" % wait_time)
+        logger.info("Rate limited for %f" % wait_time)
 
 
     def login(self, username, password):
@@ -205,7 +197,7 @@ class UploadGarmin:
         if not res:
               raise Exception('No login ticket')
         login_ticket = res.group('lt')
-        self.msgLogger.debug('Found login ticket %s', login_ticket)
+        logger.debug('Found login ticket %s', login_ticket)
 
         # Login/Password with login ticket
         data = {
@@ -231,7 +223,7 @@ class UploadGarmin:
         if not matches:
             raise Exception('Missing service ticket')
         params['ticket'] = matches.group('ticket')
-        self.msgLogger.debug('Found service ticket %s', params['ticket'])
+        logger.debug('Found service ticket %s', params['ticket'])
 
         # Second auth step
         # Needs a service ticket from previous response
@@ -248,7 +240,7 @@ class UploadGarmin:
         garmin_user = res.json()
         if not garmin_user.get('username', None):
               raise Exception("Login check failed.")
-        self.msgLogger.info('Logged in as %s' % (garmin_user['username']))
+        logger.info('Logged in as %s' % (garmin_user['username']))
 
         return True
 
@@ -313,18 +305,18 @@ class UploadGarmin:
         if res.status_code == 200:
             res = res.json()["display"]["value"]
             if res == workout_name:
-                self.msgLogger.info("Workout name set: %s" % workout_name)
+                logger.info("Workout name set: %s" % workout_name)
                 return True
             else:
-                self.msgLogger.error('Workout name not set: %s' % res)
+                logger.error('Workout name not set: %s' % res)
                 return False
         else:
-            self.msgLogger.error('Workout name not set')
+            logger.error('Workout name not set')
             return False
 
     # This for API backward compatability
     def name_workout(self, workout_id, workout_name):
-        self.msgLogger.warning('name_workout method deprecated. Use set_workout_name instead.')
+        logger.warning('name_workout method deprecated. Use set_workout_name instead.')
         return self.set_workout_name(workout_id, workout_name)
 
 
@@ -336,15 +328,15 @@ class UploadGarmin:
         '''
         for activity in self.activityHierarchy:
             if activity_type.lower() in (activity['key'], activity['display'].lower()):
-                self.msgLogger.info('Activity type found.  Using \'%s\' activity key.' % activity['key'])
+                logger.info('Activity type found.  Using \'%s\' activity key.' % activity['key'])
                 return activity['key']
-        self.msgLogger.error("Activity type not found")
+        logger.error("Activity type not found")
         return False
 
     def set_activity_type(self, workout_id, activity_type):
         activity_key = self._check_activity_type(activity_type)
         if activity_key is None:
-            self.msgLogger.error("Activity type \'%s\' not valid" % activity_type)
+            logger.error("Activity type \'%s\' not valid" % activity_type)
             return False
 
         self.authenticate()
@@ -355,10 +347,10 @@ class UploadGarmin:
         if res.status_code == 200:
             res = res.json()
             if "activityType" not in res or res["activityType"]["key"] != activity_key:
-                self.msgLogger.error("Activity type not set")
+                logger.error("Activity type not set")
                 return False
             else:
-                self.msgLogger.info("Activity type set")
+                logger.info("Activity type set")
                 return True
         else:
             return False

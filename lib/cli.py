@@ -28,11 +28,10 @@ import uploader
 import argparse
 import os.path
 import ConfigParser
-import logging
-import platform
 import glob
 import csv
 from collections import namedtuple
+from . import logger, CONFIG_FILE
 
 workoutTuple = namedtuple('workoutTuple', ['filename', 'name', 'type'])
 
@@ -46,50 +45,36 @@ class gupload():
   def __init__(self, options):
     ''' Init logger, parse command line arguments, parse config files
     '''
-    self.logLevel = options.verbose * 10
-
-    self.msgLogger = logging.getLogger(__name__)
-    self.msgLogger.setLevel(level=self.logLevel)
-    self.ch = logging.StreamHandler()
-    self.ch.setLevel(level=self.logLevel)
-    self.formatter = logging.Formatter('%(asctime)s::%(name)s::%(levelname)s::%(message)s')
-    self.ch.setFormatter(self.formatter)
-    self.msgLogger.addHandler(self.ch)
-
+    logger.setLevel(level=options.verbose * 10)
 
     self.paths = options.paths
     self.activityType = options.type
     self.activityName = options.name
 
 
-    if platform.system() == 'Windows':
-      configFile='gupload.ini'
-    else:
-      configFile='.guploadrc'
-
 
     # ---- GC login credential order of precedence ----
-    # 1) Credentials given on command line with '-l' option
+    # 1) Credentials given on command line
     # 2) Credentials given in config file in current working directory
     # 3) Credentials given in config file in user's home directory
     #
     # Command line overrides all, config in cwd overrides config in home dir
     #
-    configCurrentDir=os.path.abspath(os.path.normpath('./' + configFile))
-    configHomeDir=os.path.expanduser(os.path.normpath('~/' + configFile))
+    configCurrentDir=os.path.abspath(os.path.normpath('./' + CONFIG_FILE))
+    configHomeDir=os.path.expanduser(os.path.normpath('~/' + CONFIG_FILE))
 
     if options.username and options.password:
-      self.msgLogger.debug('Using credentials from command line.')
+      logger.debug('Using credentials from command line.')
       self.username=options.username
       self.password=options.password
     elif os.path.isfile(configCurrentDir):
-      self.msgLogger.debug('Using credentials from \'%s\'.' % configCurrentDir)
+      logger.debug('Using credentials from \'%s\'.' % configCurrentDir)
       config=ConfigParser.RawConfigParser()
       config.read(configCurrentDir)
       self.username=config.get('Credentials', 'username')
       self.password=config.get('Credentials', 'password')
     elif os.path.isfile(configHomeDir):
-      self.msgLogger.debug('Using credentials from \'%s\'.' % configHomeDir)
+      logger.debug('Using credentials from \'%s\'.' % configHomeDir)
       config=ConfigParser.RawConfigParser()
       config.read(configHomeDir)
       self.username=config.get('Credentials', 'username')
@@ -97,47 +82,36 @@ class gupload():
     else:
       cwd = os.path.abspath(os.path.normpath('./'))
       homepath = os.path.expanduser(os.path.normpath('~/'))
-      msg = '\'%s\' file does not exist in current directory (%s) or home directory (%s).  Use -l option.' % (configFile, cwd, homepath)
-      self.msgLogger.critical(msg)
+      msg = '\'%s\' file does not exist in current directory (%s) or home directory (%s).  Use -l option.' % (CONFIG_FILE, cwd, homepath)
+      logger.critical(msg)
       raise IOError(msg)
 
 
   def obscurePassword(self, password):
     ''' Obscure password for the purpose of logging output '''
-    length=len(password)
-    if length==1:
-      return('*')
-    elif length == 2:
-      return(password[1] + '*')
-    else:
-      obscured=password[0]
-      for _ in range(1, length-1):
-        obscured=obscured+'*'
-      obscured=obscured+password[length-1]
-      return(obscured)
-
+    return '*' * len(password)
 
   def checkFile(self, filename):
     ''' checkFile - check to see if file exists and that the extension is a
         valid fitness file accepted by GC.
     '''
-    self.msgLogger.debug('Filename: %s' % filename)
+    logger.debug('Filename: %s' % filename)
     if os.path.isfile(filename):
-      self.msgLogger.debug('File exists.')
+      logger.debug('File exists.')
 
       # Get file extension from name
       extension = os.path.splitext(filename)[1].lower()
-      self.msgLogger.debug('File Extension: %s' % extension)
+      logger.debug('File Extension: %s' % extension)
 
       # Valid file extensions are .tcx, .fit, and .gpx
       if extension in uploader.VALID_GARMIN_FILE_EXTENSIONS:
-        self.msgLogger.debug('File \'%s\' extension \'%s\' is valid.' % (filename, extension))
+        logger.debug('File \'%s\' extension \'%s\' is valid.' % (filename, extension))
         return True
       else:
-        self.msgLogger.warning('File \'%s\' extension \'%s\' is not valid. Skipping file...' % (filename, extension))
+        logger.warning('File \'%s\' extension \'%s\' is not valid. Skipping file...' % (filename, extension))
         return False
     else:
-      self.msgLogger.warning('File \'%s\' does not exist. Skipping...' % filename)
+      logger.warning('File \'%s\' does not exist. Skipping...' % filename)
       return False
 
   def checkListFile(self, filename):
@@ -146,7 +120,7 @@ class gupload():
     '''
     extension = os.path.splitext(filename)[1].lower()
     if extension == '.csv' and os.path.isfile(filename):
-      self.msgLogger.info('List file \'%s\' will be processed...' % filename)
+      logger.info('List file \'%s\' will be processed...' % filename)
       return True
     else:
       return False
@@ -156,8 +130,8 @@ class gupload():
         based on command line filename args, wildcard expansion, and list file
         expansion.  It uploads files and sets activity name and activity type.
     '''
-    self.msgLogger.debug('Username: ' + self.username)
-    self.msgLogger.debug('Password: ' + self.obscurePassword(self.password))
+    logger.debug('Username: ' + self.username)
+    logger.debug('Password: ' + self.obscurePassword(self.password))
 
     # Sort out file name args given on command line.  Figure out if they are fitness
     # file names, directory names containing fitness files, or names of csv file
@@ -198,7 +172,7 @@ class gupload():
     # Activity name given on command line only applies if a single filename
     # is given.  Otherwise, ignore.
     if len(filenames) != 1 and self.activityName:
-      self.msgLogger.warning('-a option valid only when one fitness file given.  Ignoring -a option.')
+      logger.warning('-a option valid only when one fitness file given.  Ignoring -a option.')
       self.activityName = None
 
     workouts = []
@@ -217,20 +191,20 @@ class gupload():
 
 
     if len(workouts) == 0:
-      self.msgLogger.critical('No valid Files.')
+      logger.critical('No valid Files.')
       raise(IOError('No valid files.'))
 
 
     # Create object
-    g = uploader.UploadGarmin(logLevel=self.logLevel)
+    g = uploader.UploadGarmin()
 
     # LOGIN
     if not g.login(self.username, self.password):
       msg = 'LOGIN FAILED - please verify your login credentials'
-      self.msgLogger.critical(msg)
+      logger.critical(msg)
       raise(IOError(msg))
     else:
-      self.msgLogger.info('Login Successful.')
+      logger.info('Login Successful.')
 
 
     # UPLOAD files.  Set description and file type if specified.
