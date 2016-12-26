@@ -1,8 +1,9 @@
 import os.path
 import glob
 import csv
+import time
 from collections import namedtuple
-from garmin_uploader import logger, api, VALID_GARMIN_FILE_EXTENSIONS
+from garmin_uploader import logger, VALID_GARMIN_FILE_EXTENSIONS
 from garmin_uploader.user import User
 
 Activity = namedtuple('Activity', ['filename', 'name', 'type'])
@@ -18,6 +19,7 @@ class Workflow():
     """
 
     def __init__(self, paths, username=None, password=None, activity_type=None, activity_name=None, verbose=3):
+        self.last_request = None
         logger.setLevel(level=verbose * 10)
 
         self.activity_type = activity_type
@@ -119,40 +121,22 @@ class Workflow():
     def run(self):
         """
         Authenticated part of the workflow
+        Simply login & upload every activity
         """
-        logger.debug('Username: {}'.format(self.username))
-        logger.debug('Password: {}'.format('*'*len(self.password)))
+        self.user.authenticate()
 
-        # Create object
-        g = api.UploadGarmin()
-
-        # LOGIN
-        if not g.login(self.username, self.password):
-            msg = 'LOGIN FAILED - please verify your login credentials'
-            logger.critical(msg)
-            raise(IOError(msg))
-        else:
-            logger.info('Login Successful.')
-
-
-        # UPLOAD files.  Set description and file type if specified.
         for activity in self.activities:
-            status, id_msg = g.upload_file(activity.filename)
-            nstat = 'N/A'
-            tstat = 'N/A'
-            if status == 'SUCCESS':
-                # Set activity name if specified
-                if activity.name:
-                    if g.set_activity_name(id_msg, activity.name):
-                        nstat = activity.name
-                    else:
-                        nstat = 'FAIL!'
-                # Set activity type if specified
-                if activity.type:
-                    if g.set_activity_type(id_msg, activity.type):
-                        tstat =  activity.type
-                    else:
-                        tstat =  'FAIL!'
+            self.rate_limit()
+            self.user.upload(activity)
 
-            print 'File: %s    ID: %s    Status: %s    Name: %s    Type: %s' % \
-                  (activity.filename, id_msg, status, nstat, tstat)
+    def rate_limit(self):
+        min_period = 1 # I appear to been banned from Garmin Connect while determining this.
+        if not self.last_request:
+            self.last_request = 0.0
+
+        wait_time = max(0, min_period - (time.time() - self.last_request))
+        time.sleep(wait_time)
+
+        self.last_request = time.time()
+        logger.info("Rate limited for %f" % wait_time)
+

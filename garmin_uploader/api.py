@@ -1,15 +1,3 @@
-"""
-Upload Garmin
-
-Handle the operation to upload to the Garmin Connect Website.
-
-"""
-#
-#
-# This version of UploadGarmin.py leverages heavily from work done in the
-# tapiriik project (https://github.com/cpfair/tapiriik), particularly the new
-# Garmin Connect user authentication using Jasig CAS.
-#
 # Copyright (c) David Lotton 02/2014
 #
 # License: Apache 2.0
@@ -30,17 +18,11 @@ Handle the operation to upload to the Garmin Connect Website.
 #
 
 import requests
-import time
 import re
 from urllib import urlencode
-from garmin_uploader import logger, VALID_GARMIN_FILE_EXTENSIONS, BINARY_FILE_FORMATS
-
-
-try:
-    import simplejson
-except ImportError:
-    import json as simplejson
+import json
 import os.path
+from garmin_uploader import logger, VALID_GARMIN_FILE_EXTENSIONS, BINARY_FILE_FORMATS
 
 # TODO: Clean
 URL_HOSTNAME = 'https://connect.garmin.com/gauth/hostname'
@@ -51,51 +33,28 @@ URL_HOST_SSO = 'sso.garmin.com'
 URL_HOST_CONNECT = 'connect.garmin.com'
 
 
-class UploadGarmin:
+class GarminAPI:
     """
-    Upload Garmin
-
-    Handle operation to open to Garmin
+    Low level Garmin Connect api connector
     """
-    def __init__(self, logLevel = 30):
-        self.rawHierarchy = requests.get("https://connect.garmin.com/proxy/activity-service-1.2/json/activity_types").text
-        self.activityHierarchy = simplejson.loads(self.rawHierarchy)["dictionary"]
-        self._last_req_start = None
 
-        # Use same user agent in every request
-        self.session = requests.Session()
-        self.session.headers.update({
+    def authenticate(self, username, password):
+        """
+        That's where the magic happens !
+        Try to mimick a browser behavior trying to login
+        on Garmin Connect as closely as possible
+        Outputs a Requests session, loaded with precious cookies
+        """
+        # Use a valid Browser user agent
+        # TODO: use several UA picked randomly
+        session = requests.Session()
+        session.headers.update({
             'User-Agent' :  'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:48.0) Gecko/20100101 Firefox/50.0',
         })
 
-        # Empty credentials
-        self.username, self.password = None, None
-
-    def _rate_limit(self):
-        min_period = 1 # I appear to been banned from Garmin Connect while determining this.
-        if not self._last_req_start:
-            self._last_req_start = 0.0
-
-        wait_time = max(0, min_period - (time.time() - self._last_req_start))
-        time.sleep(wait_time)
-
-        self._last_req_start = time.time()
-        logger.info("Rate limited for %f" % wait_time)
-
-
-    def login(self, username, password):
-        self.username = username
-        self.password = password
-        return self.authenticate()
-
-    def authenticate(self):
-        # Only try once
-        if self.session.cookies:
-            return True
-
         # Request sso hostname
         sso_hostname = None
-        resp = self.session.get(URL_HOSTNAME)
+        resp = session.get(URL_HOSTNAME)
         if not resp.ok:
             raise Exception('Invalid SSO first request status code {}'.format(resp.status_code))
 
@@ -128,7 +87,7 @@ class UploadGarmin:
               'source' : 'https://connect.garmin.com/fr-FR/signin',
               'usernameShown' : 'false',
         }
-        res = self.session.get(URL_LOGIN, params=params)
+        res = session.get(URL_LOGIN, params=params)
         if res.status_code != 200:
               raise Exception('No login form')
 
@@ -147,13 +106,13 @@ class UploadGarmin:
           'displayNameRequired' : 'false',
           'embed' : 'true',
           'lt' : login_ticket,
-          'username' : self.username,
-          'password' : self.password,
+          'username' : username,
+          'password' : password,
         }
         headers = {
           'Host' : URL_HOST_SSO,
         }
-        res = self.session.post(URL_LOGIN, params=params, data=data, headers=headers)
+        res = session.post(URL_LOGIN, params=params, data=data, headers=headers)
         if res.status_code != 200:
             raise Exception('Authentification failed.')
 
@@ -172,21 +131,21 @@ class UploadGarmin:
         headers = {
             'Host' : URL_HOST_CONNECT,
         }
-        res = self.session.get(URL_POST_LOGIN, params=params, headers=headers)
+        res = session.get(URL_POST_LOGIN, params=params, headers=headers)
         if res.status_code != 200 and not res.history:
             raise Exception('Second auth step failed.')
 
         # Check login
-        res = self.session.get(URL_CHECK_LOGIN)
+        res = session.get(URL_CHECK_LOGIN)
         garmin_user = res.json()
         if not garmin_user.get('username', None):
               raise Exception("Login check failed.")
         logger.info('Logged in as %s' % (garmin_user['username']))
 
-        return True
+        return session
 
 
-    def upload_file(self, uploadFile):
+    def upload_file(self, session, uploadFile):
 
         extension = os.path.splitext(uploadFile)[1].lower()
 
@@ -215,10 +174,8 @@ class UploadGarmin:
           uploadFileName = uploadFile.decode('ascii', 'ignore')
 
         files = {"data": (uploadFileName, open(uploadFile, mode))}
-        self.authenticate()
-        self._rate_limit()
         url = "https://connect.garmin.com/proxy/upload-service-1.1/json/upload/%s" % extension
-        res = self.session.post(url, files=files)
+        res = session.post(url, files=files)
         if not res.ok:
             raise Exception('Failed to upload {}'.format(uploadFile))
         res = res.json()["detailedImportResult"]
@@ -235,13 +192,11 @@ class UploadGarmin:
             # Upload was successsful
             return ['SUCCESS', res["successes"][0]["internalId"]]
 
-    def set_activity_name(self, activity_id, activity_name):
+    def set_activity_name(self, session, activity_id, activity_name):
         encoding_headers = {"Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"} # GC really, really needs this part, otherwise it throws obscure errors like "Invalid signature for signature method HMAC-SHA1"
-        self.authenticate()
         #data = {"value": activity_name}
         data = urlencode({"value": activity_name}).encode("UTF-8")
-        self._rate_limit()
-        res = self.session.post('https://connect.garmin.com/proxy/activity-service-1.0/json/name/%d' % (activity_id), data=data, headers=encoding_headers)
+        res = session.post('https://connect.garmin.com/proxy/activity-service-1.0/json/name/%d' % (activity_id), data=data, headers=encoding_headers)
 
         if res.status_code == 200:
             res = res.json()["display"]["value"]
@@ -262,23 +217,25 @@ class UploadGarmin:
             of valid activities provided by the GC web site.  Returns the 'key'
             which is used to set activity type throught the web API.
         '''
-        for activity in self.activityHierarchy:
+        # TODO: simplify & cache this as a dict
+        rawHierarchy = requests.get("https://connect.garmin.com/proxy/activity-service-1.2/json/activity_types").text
+        activityHierarchy = json.loads(rawHierarchy)["dictionary"]
+
+        for activity in activityHierarchy:
             if activity_type.lower() in (activity['key'], activity['display'].lower()):
                 logger.info('Activity type found.  Using \'%s\' activity key.' % activity['key'])
                 return activity['key']
         logger.error("Activity type not found")
         return False
 
-    def set_activity_type(self, activity_id, activity_type):
+    def set_activity_type(self, session, activity_id, activity_type):
         activity_key = self._check_activity_type(activity_type)
         if activity_key is None:
             logger.error("Activity type \'%s\' not valid" % activity_type)
             return False
 
-        self.authenticate()
         #data = {"value": activity_type.encode("UTF-8")}
-        self._rate_limit()
-        res = self.session.post("https://connect.garmin.com/proxy/activity-service-1.2/json/type/" + str(activity_id), data={"value": activity_key})
+        res = session.post("https://connect.garmin.com/proxy/activity-service-1.2/json/type/" + str(activity_id), data={"value": activity_key})
 
         if res.status_code == 200:
             res = res.json()
