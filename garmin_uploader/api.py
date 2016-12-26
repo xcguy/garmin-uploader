@@ -165,18 +165,19 @@ class GarminAPI:
         if not res.ok:
             raise GarminAPIException('Failed to upload {}'.format(activity))
 
-        if len(res["successes"]) == 0:
-            if len(res["failures"]) > 0:
-                if res["failures"][0]["messages"][0]['code'] == 202:
+        response = res.json()['detailedImportResult']
+        if len(response["successes"]) == 0:
+            if len(response["failures"]) > 0:
+                if response["failures"][0]["messages"][0]['code'] == 202:
                     # Activity already exists
-                    return res["failures"][0]["internalId"], False
+                    return response["failures"][0]["internalId"], False
                 else:
-                    return GarminAPIException(res["failures"][0]["messages"])
+                    return GarminAPIException(response["failures"][0]["messages"])
             else:
                 raise GarminAPIException('Unknown error')
         else:
             # Upload was successsful
-            return res["successes"][0]["internalId"], True
+            return response["successes"][0]["internalId"], True
 
     def set_activity_name(self, session, activity):
         """

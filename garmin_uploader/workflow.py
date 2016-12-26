@@ -19,7 +19,7 @@ class Activity(object):
     def __repr__(self):
         if self.id is None:
             return self.name or self.filename
-        return '{} : {}'.format(self.id, self.name)
+        return '{} : {}'.format(self.id, self.name or self.filename)
 
     @property
     def extension(self):
@@ -63,11 +63,12 @@ class Activity(object):
         """
         Upload an activity once authenticated
         """
+        assert isinstance(user, User)
         assert user.session is not None
 
         api = GarminAPI()
         try:
-            self.id, uploaded = api.upload_file(user.session, self.path)
+            self.id, uploaded = api.upload_activity(user.session, self)
         except GarminAPIException as e:
             logger.warning('Upload failure: {}'.format(e))
             return False
@@ -78,14 +79,14 @@ class Activity(object):
             # Set activity name if specified
             if self.name:
                 try:
-                    api.set_activity_name(self.session, self.id, self.name)
+                    api.set_activity_name(user.session, self)
                 except GarminAPIException as e:
                     logger.warning('Activity name update failed: {}'.format(e))
 
             # Set activity type if specified
             if self.type:
                 try:
-                    api.set_activity_type(self.session, self.id, self.type)
+                    api.set_activity_type(user.session, self)
                 except GarminAPIException as e:
                     logger.warning('Activity type update failed: {}'.format(e))
 
@@ -214,7 +215,9 @@ class Workflow():
 
         for activity in self.activities:
             self.rate_limit()
-            self.user.upload(activity)
+            activity.upload(self.user)
+
+        logger.info('All done.')
 
     def rate_limit(self):
         min_period = 1 # I appear to been banned from Garmin Connect while determining this.
@@ -222,8 +225,9 @@ class Workflow():
             self.last_request = 0.0
 
         wait_time = max(0, min_period - (time.time() - self.last_request))
+        if wait_time <= 0:
+            return
         time.sleep(wait_time)
 
         self.last_request = time.time()
         logger.info("Rate limited for %f" % wait_time)
-

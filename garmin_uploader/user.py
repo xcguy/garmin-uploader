@@ -57,7 +57,7 @@ class User(object):
         api = GarminAPI()
         try:
             self.session = api.authenticate(self.username, self.password)
-            logger.info('Login Successful.')
+            logger.debug('Login Successful.')
         except Exception as e:
             logger.critical('Login Failure: {}'.format(e))
             return False
