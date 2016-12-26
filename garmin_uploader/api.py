@@ -32,6 +32,7 @@ URL_ACTIVITY_NAME = 'https://connect.garmin.com/proxy/activity-service-1.0/json/
 URL_ACTIVITY_TYPE = 'https://connect.garmin.com/proxy/activity-service-1.2/json/type'
 URL_ACTIVITY_TYPES = 'https://connect.garmin.com/proxy/activity-service-1.2/json/activity_types'
 
+
 class GarminAPIException(Exception):
     """
     An Exception occured in Garmin API

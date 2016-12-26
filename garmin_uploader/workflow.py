@@ -16,7 +16,7 @@ class Activity(object):
         self.name = name
         self.type = type
 
-    def __str__(self):
+    def __repr__(self):
         if self.id is None:
             return self.name or self.filename
         return '{} : {}'.format(self.id, self.name)
@@ -193,6 +193,7 @@ class Workflow():
               activities += [
                   Activity(row['filename'], row['name'], row['type'])
                   for row in reader
+                  if is_activity(row['filename'])
               ]
 
 

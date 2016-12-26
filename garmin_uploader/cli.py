@@ -14,13 +14,6 @@
 # ENTIRE RISK AS TO THE QUALITY AND PERFORMANCE OF THE PROGRAM
 # IS WITH YOU. SHOULD THE PROGRAM PROVE DEFECTIVE, YOU ASSUME
 # THE COST OF ALL NECESSARY SERVICING, REPAIR OR CORRECTION.
-#
-#
-# Name: gupload.py
-#
-#   Brief:  gupload.py is a utility to upload Garmin fitness
-#       GPS files to the connect.garmin.com web site.
-#       It requires that you have a user account on that
 #       site.  See help (-h option) for more information.
 ###
 
