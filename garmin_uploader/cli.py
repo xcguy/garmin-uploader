@@ -29,7 +29,7 @@ import os.path
 import glob
 import csv
 from collections import namedtuple
-from garmin_uploader import logger, uploader
+from garmin_uploader import logger, api
 from garmin_uploader.user import User
 
 Activity = namedtuple('Activity', ['filename', 'name', 'type'])
@@ -90,7 +90,7 @@ class Workflow():
           logger.debug("File '{}' has extension '{}'".format(filename, extension))
 
           # Valid file extensions are .tcx, .fit, and .gpx
-          if extension in uploader.VALID_GARMIN_FILE_EXTENSIONS:
+          if extension in api.VALID_GARMIN_FILE_EXTENSIONS:
               logger.debug("File '{}' extension '{}' is valid.".format(filename, extension))
               return True
           else:
@@ -151,7 +151,7 @@ class Workflow():
         logger.debug('Password: {}'.format('*'*len(self.password)))
 
         # Create object
-        g = uploader.UploadGarmin()
+        g = api.UploadGarmin()
 
         # LOGIN
         if not g.login(self.username, self.password):
