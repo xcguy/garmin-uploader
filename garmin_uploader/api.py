@@ -19,19 +19,23 @@
 
 import requests
 import re
-from urllib import urlencode
-import json
-import os.path
-from garmin_uploader import logger, VALID_GARMIN_FILE_EXTENSIONS, BINARY_FILE_FORMATS
+from garmin_uploader import logger
 
-# TODO: Clean
 URL_HOSTNAME = 'https://connect.garmin.com/gauth/hostname'
 URL_LOGIN = 'https://sso.garmin.com/sso/login'
 URL_POST_LOGIN = 'https://connect.garmin.com/post-auth/login'
 URL_CHECK_LOGIN = 'https://connect.garmin.com/user/username'
 URL_HOST_SSO = 'sso.garmin.com'
 URL_HOST_CONNECT = 'connect.garmin.com'
+URL_UPLOAD = 'https://connect.garmin.com/proxy/upload-service-1.1/json/upload'
+URL_ACTIVITY_NAME = 'https://connect.garmin.com/proxy/activity-service-1.0/json/name'
+URL_ACTIVITY_TYPE = 'https://connect.garmin.com/proxy/activity-service-1.2/json/type'
 
+
+class GarminAPIException(Exception):
+    """
+    An Exception occured in Garmin API
+    """
 
 class GarminAPI:
     """
@@ -145,105 +149,99 @@ class GarminAPI:
         return session
 
 
-    def upload_file(self, session, uploadFile):
+    def upload_activity(self, session, activity):
+        """
+        Upload an activity on Garmin
+        Support multiple formats
+        """
+        assert activity.id is None
 
-        extension = os.path.splitext(uploadFile)[1].lower()
-
-        # Valid File extensions are .tcx, .fit, and .gpx
-        if extension not in VALID_GARMIN_FILE_EXTENSIONS:
-            raise Exception("Invalid File Extension")
-
-        if extension in BINARY_FILE_FORMATS:
-            mode = 'rb'
-        else:
-            mode = 'r'
-
-        # Garmin Connect web site does not comply with RFC 2231.
-        # urllib3 (used by the requests module) automatically detects non-ascii
-        # characters in filenames and generates the filename* header parameter
-        # (with asterisk - signifying that the filename has non-ascii characters)
-        # instead of the filename (without asterisk) header parameter.  Garmin
-        # Connect does not accept the asterisked version of filename and there
-        # is no way to tell urllib3 to not generate it.  The work-around for
-        # Garmin's noncompliant behavior (sending non-ascii characters with the
-        # non-asterisked filename parameter) is to always send an ascii encodable
-        # filename.  This is achieved by parsing out the non-ascii characters.
-        try:
-          uploadFileName = uploadFile.encode('ascii')
-        except UnicodeEncodeError:
-          uploadFileName = uploadFile.decode('ascii', 'ignore')
-
-        files = {"data": (uploadFileName, open(uploadFile, mode))}
-        url = "https://connect.garmin.com/proxy/upload-service-1.1/json/upload/%s" % extension
+        files = {
+            "data": (activity.filename, activity.open()),
+        }
+        url = '{}/{}'.format(URL_UPLOAD, activity.extension)
         res = session.post(url, files=files)
         if not res.ok:
-            raise Exception('Failed to upload {}'.format(uploadFile))
-        res = res.json()["detailedImportResult"]
+            raise GarminAPIException('Failed to upload {}'.format(activity))
 
         if len(res["successes"]) == 0:
             if len(res["failures"]) > 0:
                 if res["failures"][0]["messages"][0]['code'] == 202:
-                    return ['EXISTS', res["failures"][0]["internalId"]]
+                    # Activity already exists
+                    return res["failures"][0]["internalId"], False
                 else:
-                    return ['FAIL', res["failures"][0]["messages"]]
+                    return GarminAPIException(res["failures"][0]["messages"])
             else:
-                return ['FAIL', 'Unknown error']
+                raise GarminAPIException('Unknown error')
         else:
             # Upload was successsful
-            return ['SUCCESS', res["successes"][0]["internalId"]]
+            return res["successes"][0]["internalId"], True
 
-    def set_activity_name(self, session, activity_id, activity_name):
-        encoding_headers = {"Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"} # GC really, really needs this part, otherwise it throws obscure errors like "Invalid signature for signature method HMAC-SHA1"
-        #data = {"value": activity_name}
-        data = urlencode({"value": activity_name}).encode("UTF-8")
-        res = session.post('https://connect.garmin.com/proxy/activity-service-1.0/json/name/%d' % (activity_id), data=data, headers=encoding_headers)
+    def set_activity_name(self, session, activity):
+        """
+        Update the activity name
+        """
+        assert activity.id is not None
+        assert activity.name is not None
 
-        if res.status_code == 200:
-            res = res.json()["display"]["value"]
-            if res == activity_name:
-                logger.info("activity name set: %s" % activity_name)
-                return True
-            else:
-                logger.error('activity name not set: %s' % res)
-                return False
-        else:
-            logger.error('activity name not set')
+        url = '{}/{}'.format(URL_ACTIVITY_NAME, activity.id)
+        data = {
+            'value' : activity.name,
+        }
+        res = session.post(url, data=data)
+        if not res.ok:
+            raise GarminAPIException('Activity name not set')
+
+        new_name = res.json()["display"]["value"]
+        if new_name != activity.name:
+            raise GarminAPIException('Activity name not set: {}'.format(res.content))
+
+    def load_activity_types(self):
+        """
+        Fetch valid activity types from Garmin Connect
+        """
+        # Only fetch once
+        if self.activity_types:
+            return self.activity_types
+
+        logger.debug('Fecthing activity types')
+        resp = requests.get("https://connect.garmin.com/proxy/activity-service-1.2/json/activity_types")
+        if not resp.ok:
+            raise GarminAPIException('Failed to retrieve activity types')
+
+
+        # Store as a clean dict, mapping keys and lower case common name
+        types = resp.json()["dictionary"]
+        out = [(t['key'], t['key']) for t in types]
+        out = [(t['display'].lower(), t['key']) for t in types]
+        out = dict(out)
+        self.activity_types = out
+
+        logger.debug('Fetched {} activity types'.format(len(self.activity_types)))
+        return self.activity_types
+
+    def set_activity_type(self, session, activity):
+        """
+        Update the activity type
+        """
+        assert activity.id is not None
+        assert activity.type is not None
+
+        # Load the corresponding type key on Garmin Connect
+        types = self.load_activity_types()
+        type_key = types.get(activity.type)
+        if type_key is None:
+            logger.error("Activity type '{}' not valid".format(activity.type))
             return False
 
+        url = '{}/{}'.format(URL_ACTIVITY_NAME, activity.id)
+        data = {
+            'value' : type_key,
+        }
+        res = session.post(url, data)
+        if not res.ok:
+            raise GarminAPIException('Activity type not set')
 
-    def _check_activity_type(self, activity_type):
-        ''' Fetch valid activity types from Garmin Connect,  compare the given
-            activity_type against the 'key' and 'display' values in the dictionary
-            of valid activities provided by the GC web site.  Returns the 'key'
-            which is used to set activity type throught the web API.
-        '''
-        # TODO: simplify & cache this as a dict
-        rawHierarchy = requests.get("https://connect.garmin.com/proxy/activity-service-1.2/json/activity_types").text
-        activityHierarchy = json.loads(rawHierarchy)["dictionary"]
-
-        for activity in activityHierarchy:
-            if activity_type.lower() in (activity['key'], activity['display'].lower()):
-                logger.info('Activity type found.  Using \'%s\' activity key.' % activity['key'])
-                return activity['key']
-        logger.error("Activity type not found")
-        return False
-
-    def set_activity_type(self, session, activity_id, activity_type):
-        activity_key = self._check_activity_type(activity_type)
-        if activity_key is None:
-            logger.error("Activity type \'%s\' not valid" % activity_type)
-            return False
-
-        #data = {"value": activity_type.encode("UTF-8")}
-        res = session.post("https://connect.garmin.com/proxy/activity-service-1.2/json/type/" + str(activity_id), data={"value": activity_key})
-
-        if res.status_code == 200:
-            res = res.json()
-            if "activityType" not in res or res["activityType"]["key"] != activity_key:
-                logger.error("Activity type not set")
-                return False
-            else:
-                logger.info("Activity type set")
-                return True
-        else:
-            return False
+        res = res.json()
+        if "activityType" not in res or res["activityType"]["key"] != type_key:
+            raise GarminAPIException('Activity type not set: {}'.format(res.content))

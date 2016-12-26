@@ -2,11 +2,95 @@ import os.path
 import glob
 import csv
 import time
-from collections import namedtuple
-from garmin_uploader import logger, VALID_GARMIN_FILE_EXTENSIONS
+from garmin_uploader import logger, VALID_GARMIN_FILE_EXTENSIONS, BINARY_FILE_FORMATS
 from garmin_uploader.user import User
+from garmin_uploader.api import GarminAPI, GarminAPIException
 
-Activity = namedtuple('Activity', ['filename', 'name', 'type'])
+class Activity(object):
+    """
+    Garmin Connect Activity model
+    """
+    def __init__(self, path, name=None, type=None):
+        self.id = None # provided on upload
+        self.path = path
+        self.name = name
+        self.type = type
+
+    def __str__(self):
+        if self.id is None:
+            return self.name or self.filename
+        return '{} : {}'.format(self.id, self.name)
+
+    @property
+    def extension(self):
+        extension = os.path.splitext(self.path)[1].lower()
+
+        # Valid File extensions are .tcx, .fit, and .gpx
+        if extension not in VALID_GARMIN_FILE_EXTENSIONS:
+            raise Exception("Invalid File Extension")
+
+        return extension
+
+    @property
+    def filename(self):
+
+        # Garmin Connect web site does not comply with RFC 2231.
+        # urllib3 (used by the requests module) automatically detects non-ascii
+        # characters in filenames and generates the filename* header parameter
+        # (with asterisk - signifying that the filename has non-ascii characters)
+        # instead of the filename (without asterisk) header parameter.  Garmin
+        # Connect does not accept the asterisked version of filename and there
+        # is no way to tell urllib3 to not generate it.  The work-around for
+        # Garmin's noncompliant behavior (sending non-ascii characters with the
+        # non-asterisked filename parameter) is to always send an ascii encodable
+        # filename.  This is achieved by parsing out the non-ascii characters.
+        filename = os.path.basename(self.path)
+        try:
+          return filename.encode('ascii')
+        except UnicodeEncodeError:
+          return filename.decode('ascii', 'ignore')
+
+
+    def open(self):
+        """
+        Open local activity file as a file descriptor
+        """
+        mode = self.extension in BINARY_FILE_FORMATS and 'rb' or 'r'
+        return open(self.path, mode)
+
+
+    def upload(self, user):
+        """
+        Upload an activity once authenticated
+        """
+        assert user.session is not None
+
+        api = GarminAPI()
+        try:
+            self.id, uploaded = api.upload_file(user.session, self.path)
+        except GarminAPIException as e:
+            logger.warning('Upload failure: {}'.format(e))
+            return False
+
+        if uploaded:
+            logger.info('Uploaded activity {}'.format(self))
+
+            # Set activity name if specified
+            if self.name:
+                try:
+                    api.set_activity_name(self.session, self.id, self.name)
+                except GarminAPIException as e:
+                    logger.warning('Activity name update failed: {}'.format(e))
+
+            # Set activity type if specified
+            if self.type:
+                try:
+                    api.set_activity_type(self.session, self.id, self.type)
+                except GarminAPIException as e:
+                    logger.warning('Activity type update failed: {}'.format(e))
+
+        else:
+            logger.info('Activity already uploaded {}'.format(self))
 
 
 class Workflow():
@@ -72,43 +156,44 @@ class Workflow():
               logger.warning("File '{}' extension '{}' is not valid. Skipping file...".format(filename, extension))
               return False
 
-      filenames, listfiles = [], []
+      valid_paths, csv_files = [], []
       for path in paths:
         path = os.path.realpath(path)
         if is_activity(path):
           # Use file directly
-          filenames.append(path)
+          valid_paths.append(path)
 
         elif is_csv(path):
             # Use file directly
             logger.info("List file '{}' will be processed...".format(path))
-            filenames.append(path)
+            csv_files.append(path)
 
         elif os.path.isdir(path):
             # Use files in directory
             # - Does not recursively drill into directories.
             # - Does not search for csv files in directories.
-            filenames += [f for f in glob.glob(os.path.join(path, '*')) if is_activity(f)]
+            valid_paths += [f for f in glob.glob(os.path.join(path, '*')) if is_activity(f)]
 
       # Activity name given on command line only applies if a single filename
       # is given.  Otherwise, ignore.
-      if len(filenames) != 1 and self.activity_name:
+      if len(valid_paths) != 1 and self.activity_name:
           logger.warning('-a option valid only when one fitness file given.  Ignoring -a option.')
           self.activity_name = None
 
-      activities = []
+      # Build activities from valid paths
+      activities = [
+         Activity(p, self.activity_name, self.activity_type)
+         for p in valid_paths
+      ]
 
-      # Build activity tuples - a Activity has a filename, name, and file type
-      for filename in filenames:
-          activities.append(Activity(filename=filename, name=self.activity_name, type=self.activity_type))
-
-      # Pull in file info from csv files and apend tuples to list
-      for listfile in listfiles:
-          with open(listfile, 'rb') as csvfile:
+      # Pull in file info from csv files and apppend activities
+      for csv_file in csv_files:
+          with open(csv_file, 'rb') as csvfile:
               reader = csv.DictReader(csvfile)
-              for row in reader:
-                  if self.checkFile(row['filename']):
-                    activities.append(Activity(filename=row['filename'], name=row['name'], type=row['type']))
+              activities += [
+                  Activity(row['filename'], row['name'], row['type'])
+                  for row in reader
+              ]
 
 
       if len(activities) == 0:

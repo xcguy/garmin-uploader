@@ -63,29 +63,3 @@ class User(object):
             logger.critical(msg)
             raise(IOError(msg))
 
-    def upload(self, activity):
-        """
-        Upload an activity once authenticated
-        """
-        assert self.session is not None
-
-        api = GarminAPI()
-        status, id_msg = api.upload_file(self.session, activity.filename)
-        nstat = 'N/A'
-        tstat = 'N/A'
-        if status == 'SUCCESS':
-            # Set activity name if specified
-            if activity.name:
-                if api.set_activity_name(self.session, id_msg, activity.name):
-                    nstat = activity.name
-                else:
-                    nstat = 'FAIL!'
-            # Set activity type if specified
-            if activity.type:
-                if api.set_activity_type(self.session, id_msg, activity.type):
-                    tstat =  activity.type
-                else:
-                    tstat =  'FAIL!'
-
-        print 'File: %s    ID: %s    Status: %s    Name: %s    Type: %s' % \
-              (activity.filename, id_msg, status, nstat, tstat)
