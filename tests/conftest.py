@@ -40,4 +40,4 @@ def activities_dir(tmpdir_factory):
     yield str(workdir)
 
     # Cleanup
-    #workdir.remove()
+    workdir.remove()

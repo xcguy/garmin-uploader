@@ -117,91 +117,91 @@ class Workflow():
 
 
     def load_activities(self, paths):
-      """
-      Load all activities files
-      """
-      # Sort out file name args given on command line.  Figure out if they are fitness
-      # file names, directory names containing fitness files, or names of csv file
-      # lists.  Also, expand file name wildcards, if necessary.  Check to see if
-      # files exist and if the file extension is valid.  Build lists of fitnes
-      # filenames, directories # which will be further searched for files, and
-      # list files.
+        """
+        Load all activities files
+        """
+        # Sort out file name args given on command line.  Figure out if they are fitness
+        # file names, directory names containing fitness files, or names of csv file
+        # lists.  Also, expand file name wildcards, if necessary.  Check to see if
+        # files exist and if the file extension is valid.  Build lists of fitnes
+        # filenames, directories # which will be further searched for files, and
+        # list files.
 
-      def is_csv(filename):
-          '''
-          check to see if file exists and that the file
-          extension is .csv
-          '''
-          extension = os.path.splitext(filename)[1].lower()
-          return extension == '.csv' and os.path.isfile(filename)
+        def is_csv(filename):
+            '''
+            check to see if file exists and that the file
+            extension is .csv
+            '''
+            extension = os.path.splitext(filename)[1].lower()
+            return extension == '.csv' and os.path.isfile(filename)
 
-      def is_activity(filename):
-          '''
-          check to see if file exists and that the extension is a
-          valid activity file accepted by GC.
-          '''
-          if not os.path.isfile(filename):
-              logger.warning("File '{}' does not exist. Skipping...".format(filename))
-              return False
+        def is_activity(filename):
+            '''
+            check to see if file exists and that the extension is a
+            valid activity file accepted by GC.
+            '''
+            if not os.path.isfile(filename):
+                logger.warning("File '{}' does not exist. Skipping...".format(filename))
+                return False
 
-          # Get file extension from name
-          extension = os.path.splitext(filename)[1].lower()
-          logger.debug("File '{}' has extension '{}'".format(filename, extension))
+            # Get file extension from name
+            extension = os.path.splitext(filename)[1].lower()
+            logger.debug("File '{}' has extension '{}'".format(filename, extension))
 
-          # Valid file extensions are .tcx, .fit, and .gpx
-          if extension in VALID_GARMIN_FILE_EXTENSIONS:
-              logger.debug("File '{}' extension '{}' is valid.".format(filename, extension))
-              return True
-          else:
-              logger.warning("File '{}' extension '{}' is not valid. Skipping file...".format(filename, extension))
-              return False
+            # Valid file extensions are .tcx, .fit, and .gpx
+            if extension in VALID_GARMIN_FILE_EXTENSIONS:
+                logger.debug("File '{}' extension '{}' is valid.".format(filename, extension))
+                return True
+            else:
+                logger.warning("File '{}' extension '{}' is not valid. Skipping file...".format(filename, extension))
+                return False
 
-      valid_paths, csv_files = [], []
-      for path in paths:
-        path = os.path.realpath(path)
-        if is_activity(path):
-          # Use file directly
-          valid_paths.append(path)
-
-        elif is_csv(path):
+        valid_paths, csv_files = [], []
+        for path in paths:
+          path = os.path.realpath(path)
+          if is_activity(path):
             # Use file directly
-            logger.info("List file '{}' will be processed...".format(path))
-            csv_files.append(path)
+            valid_paths.append(path)
 
-        elif os.path.isdir(path):
-            # Use files in directory
-            # - Does not recursively drill into directories.
-            # - Does not search for csv files in directories.
-            valid_paths += [f for f in glob.glob(os.path.join(path, '*')) if is_activity(f)]
+          elif is_csv(path):
+              # Use file directly
+              logger.info("List file '{}' will be processed...".format(path))
+              csv_files.append(path)
 
-      # Activity name given on command line only applies if a single filename
-      # is given.  Otherwise, ignore.
-      if len(valid_paths) != 1 and self.activity_name:
-          logger.warning('-a option valid only when one fitness file given.  Ignoring -a option.')
-          self.activity_name = None
+          elif os.path.isdir(path):
+              # Use files in directory
+              # - Does not recursively drill into directories.
+              # - Does not search for csv files in directories.
+              valid_paths += [f for f in glob.glob(os.path.join(path, '*')) if is_activity(f)]
 
-      # Build activities from valid paths
-      activities = [
-         Activity(p, self.activity_name, self.activity_type)
-         for p in valid_paths
-      ]
+        # Activity name given on command line only applies if a single filename
+        # is given.  Otherwise, ignore.
+        if len(valid_paths) != 1 and self.activity_name:
+            logger.warning('-a option valid only when one fitness file given.  Ignoring -a option.')
+            self.activity_name = None
 
-      # Pull in file info from csv files and apppend activities
-      for csv_file in csv_files:
-          with open(csv_file, 'rb') as csvfile:
-              reader = csv.DictReader(csvfile)
-              activities += [
-                  Activity(row['filename'], row['name'], row['type'])
-                  for row in reader
-                  if is_activity(row['filename'])
-              ]
+        # Build activities from valid paths
+        activities = [
+           Activity(p, self.activity_name, self.activity_type)
+           for p in valid_paths
+        ]
+
+        # Pull in file info from csv files and apppend activities
+        for csv_file in csv_files:
+            with open(csv_file, 'rb') as csvfile:
+                reader = csv.DictReader(csvfile)
+                activities += [
+                    Activity(row['filename'], row['name'], row['type'])
+                    for row in reader
+                    if is_activity(row['filename'])
+                ]
 
 
-      if len(activities) == 0:
-          logger.critical('No valid Files.')
-          raise(IOError('No valid files.'))
+        if len(activities) == 0:
+            logger.critical('No valid Files.')
+            raise(IOError('No valid files.'))
 
-      return activities
+        return activities
 
 
     def run(self):
