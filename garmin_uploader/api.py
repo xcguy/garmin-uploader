@@ -28,15 +28,16 @@ URL_CHECK_LOGIN = 'https://connect.garmin.com/user/username'
 URL_HOST_SSO = 'sso.garmin.com'
 URL_HOST_CONNECT = 'connect.garmin.com'
 URL_UPLOAD = 'https://connect.garmin.com/proxy/upload-service-1.1/json/upload'
-URL_ACTIVITY_NAME = 'https://connect.garmin.com/proxy/activity-service-1.0/json/name'
-URL_ACTIVITY_TYPE = 'https://connect.garmin.com/proxy/activity-service-1.2/json/type'
-URL_ACTIVITY_TYPES = 'https://connect.garmin.com/proxy/activity-service-1.2/json/activity_types'
+URL_ACTIVITY_NAME = 'https://connect.garmin.com/proxy/activity-service-1.0/json/name'  # noqa
+URL_ACTIVITY_TYPE = 'https://connect.garmin.com/proxy/activity-service-1.2/json/type'  # noqa
+URL_ACTIVITY_TYPES = 'https://connect.garmin.com/proxy/activity-service-1.2/json/activity_types'  # noqa
 
 
 class GarminAPIException(Exception):
     """
     An Exception occured in Garmin API
     """
+
 
 class GarminAPI:
     """
@@ -55,70 +56,72 @@ class GarminAPI:
         # TODO: use several UA picked randomly
         session = requests.Session()
         session.headers.update({
-            'User-Agent' : 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:48.0) Gecko/20100101 Firefox/50.0',
+            'User-Agent': 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:48.0) Gecko/20100101 Firefox/50.0',  # noqa
         })
 
         # Request sso hostname
         sso_hostname = None
         resp = session.get(URL_HOSTNAME)
         if not resp.ok:
-            raise Exception('Invalid SSO first request status code {}'.format(resp.status_code))
+            raise Exception('Invalid SSO first request status code {}'.format(resp.status_code))  # noqa
 
         sso_hostname = resp.json().get('host', None).rstrip('.garmin.com')
         # Load login page to get login ticket
         params = {
-              'clientId' : 'GarminConnect',
-              'webhost' : sso_hostname,
+              'clientId': 'GarminConnect',
+              'webhost': sso_hostname,
 
               # Full parameters from Firebug
-              # Fuck this shit. Who needs mandatory urls in a request parameters !
-              'consumeServiceTicket' : 'false',
-              'createAccountShown' : 'true',
-              'cssUrl' : 'https://static.garmincdn.com/com.garmin.connect/ui/css/gauth-custom-v1.2-min.css',
-              'displayNameShown' : 'false',
-              'embedWidget' : 'false',
-              'gauthHost' : 'https://sso.garmin.com/sso',
-              'generateExtraServiceTicket' : 'false',
+              # Fuck this shit.
+              # Who needs mandatory urls in a request parameters !
+              'consumeServiceTicket': 'false',
+              'createAccountShown': 'true',
+              'cssUrl': 'https://static.garmincdn.com/com.garmin.connect/ui/css/gauth-custom-v1.2-min.css',  # noqa
+              'displayNameShown': 'false',
+              'embedWidget': 'false',
+              'gauthHost': 'https://sso.garmin.com/sso',
+              'generateExtraServiceTicket': 'false',
               'globalOptInChecked': 'false',
               'globalOptInShown': 'false',
-              'id' : 'gauth-widget',
-              'initialFocus' : 'true',
-              'locale' : 'fr',
-              'openCreateAlcount' : 'false',
-              'redirectAfterAccountCreationUrl' : 'https://connect.garmin.com/post-auth/login',
-              'redirectAfterAccountLoginUrl' : 'https://connect.garmin.com/post-auth/login',
-              'rememberMeChecked' : 'false',
-              'rememberMeShown' : 'true',
-              'service' : 'https://connect.garmin.com/post-auth/login',
-              'source' : 'https://connect.garmin.com/fr-FR/signin',
-              'usernameShown' : 'false',
+              'id': 'gauth-widget',
+              'initialFocus': 'true',
+              'locale': 'fr',
+              'openCreateAlcount': 'false',
+              'redirectAfterAccountCreationUrl': 'https://connect.garmin.com/post-auth/login',  # noqa
+              'redirectAfterAccountLoginUrl': 'https://connect.garmin.com/post-auth/login',  # noqa
+              'rememberMeChecked': 'false',
+              'rememberMeShown': 'true',
+              'service': 'https://connect.garmin.com/post-auth/login',
+              'source': 'https://connect.garmin.com/fr-FR/signin',
+              'usernameShown': 'false',
         }
         res = session.get(URL_LOGIN, params=params)
         if res.status_code != 200:
-              raise Exception('No login form')
+            raise Exception('No login form')
 
         # Get the login ticket value
         regex = '<input\s+type="hidden"\s+name="lt"\s+value="(?P<lt>\w+)"\s+/>'
         res = re.search(regex, res.text)
         if not res:
-              raise Exception('No login ticket')
+            raise Exception('No login ticket')
         login_ticket = res.group('lt')
         logger.debug('Found login ticket %s', login_ticket)
 
         # Login/Password with login ticket
         data = {
           # All parameters are needed
-          '_eventId' : 'submit',
-          'displayNameRequired' : 'false',
-          'embed' : 'true',
-          'lt' : login_ticket,
-          'username' : username,
-          'password' : password,
+          '_eventId': 'submit',
+          'displayNameRequired': 'false',
+          'embed': 'true',
+          'lt': login_ticket,
+          'username': username,
+          'password': password,
         }
         headers = {
-          'Host' : URL_HOST_SSO,
+          'Host': URL_HOST_SSO,
         }
-        res = session.post(URL_LOGIN, params=params, data=data, headers=headers)
+        res = session.post(URL_LOGIN, params=params, data=data,
+                           headers=headers)
         if res.status_code != 200:
             raise Exception('Authentification failed.')
 
@@ -134,7 +137,7 @@ class GarminAPI:
         # Second auth step
         # Needs a service ticket from previous response
         headers = {
-            'Host' : URL_HOST_CONNECT,
+            'Host': URL_HOST_CONNECT,
         }
         res = session.get(URL_POST_LOGIN, params=params, headers=headers)
         if res.status_code != 200 and not res.history:
@@ -144,11 +147,10 @@ class GarminAPI:
         res = session.get(URL_CHECK_LOGIN)
         garmin_user = res.json()
         if not garmin_user.get('username', None):
-              raise Exception("Login check failed.")
+            raise Exception("Login check failed.")
         logger.info('Logged in as %s' % (garmin_user['username']))
 
         return session
-
 
     def upload_activity(self, session, activity):
         """
@@ -172,7 +174,7 @@ class GarminAPI:
                     # Activity already exists
                     return response["failures"][0]["internalId"], False
                 else:
-                    raise GarminAPIException(response["failures"][0]["messages"])
+                    raise GarminAPIException(response["failures"][0]["messages"])  # noqa
             else:
                 raise GarminAPIException('Unknown error: {}'.format(response))
         else:
@@ -188,15 +190,15 @@ class GarminAPI:
 
         url = '{}/{}'.format(URL_ACTIVITY_NAME, activity.id)
         data = {
-            'value' : activity.name,
+            'value': activity.name,
         }
         res = session.post(url, data=data)
         if not res.ok:
-            raise GarminAPIException('Activity name not set: {}'.format(res.content))
+            raise GarminAPIException('Activity name not set: {}'.format(res.content))  # noqa
 
         new_name = res.json()["display"]["value"]
         if new_name != activity.name:
-            raise GarminAPIException('Activity name not set: {}'.format(res.content))
+            raise GarminAPIException('Activity name not set: {}'.format(res.content))  # noqa
 
     def load_activity_types(self):
         """
@@ -218,7 +220,7 @@ class GarminAPI:
         out = dict(out)
         self.activity_types = out
 
-        logger.debug('Fetched {} activity types'.format(len(self.activity_types)))
+        logger.debug('Fetched {} activity types'.format(len(self.activity_types)))  # noqa
         return self.activity_types
 
     def set_activity_type(self, session, activity):
@@ -237,12 +239,12 @@ class GarminAPI:
 
         url = '{}/{}'.format(URL_ACTIVITY_TYPE, activity.id)
         data = {
-            'value' : type_key,
+            'value': type_key,
         }
         res = session.post(url, data)
         if not res.ok:
-            raise GarminAPIException('Activity type not set: {}'.format(res.content))
+            raise GarminAPIException('Activity type not set: {}'.format(res.content))  # noqa
 
         res = res.json()
         if "activityType" not in res or res["activityType"]["key"] != type_key:
-            raise GarminAPIException('Activity type not set: {}'.format(res.content))
+            raise GarminAPIException('Activity type not set: {}'.format(res.content))  # noqa

@@ -1,5 +1,6 @@
 import pytest
 
+
 @pytest.fixture(scope='session')
 def api():
     """
@@ -7,6 +8,7 @@ def api():
     """
     from garmin_uploader.api import GarminAPI
     return GarminAPI()
+
 
 @pytest.fixture(scope='session')
 def user():
@@ -19,6 +21,7 @@ def user():
     login = 'guploader@yopmail.com'
     password = 'GuploaderTest51'[::-1]
     return User(login, password)
+
 
 @pytest.fixture(scope='session')
 def activities_dir(tmpdir_factory):

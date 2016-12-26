@@ -15,18 +15,23 @@ class User(object):
     Authenticates through web api as a browser
     """
     def __init__(self, username=None, password=None):
+        """
+        ---- GC login credential order of precedence ----
+        1) Credentials given on command line
+        2) Credentials given in config file in current working directory
+        3) Credentials given in config file in user's home directory
+
+        Command line overrides all, config in cwd overrides config in home dir
+        """
         # Authenticated API session
         self.session = None
 
-        # ---- GC login credential order of precedence ----
-        # 1) Credentials given on command line
-        # 2) Credentials given in config file in current working directory
-        # 3) Credentials given in config file in user's home directory
-        #
-        # Command line overrides all, config in cwd overrides config in home dir
-        #
-        configCurrentDir = os.path.abspath(os.path.normpath('./' + CONFIG_FILE))
-        configHomeDir = os.path.expanduser(os.path.normpath('~/' + CONFIG_FILE))
+        configCurrentDir = os.path.abspath(
+            os.path.normpath('./' + CONFIG_FILE)
+        )
+        configHomeDir = os.path.expanduser(
+            os.path.normpath('~/' + CONFIG_FILE)
+        )
 
         if username and password:
             logger.debug('Using credentials from command line.')
@@ -47,9 +52,9 @@ class User(object):
         else:
             cwd = os.path.abspath(os.path.normpath('./'))
             homepath = os.path.expanduser(os.path.normpath('~/'))
-            msg = '\'%s\' file does not exist in current directory (%s) or home directory (%s).  Use -l option.' % (CONFIG_FILE, cwd, homepath)
-            logger.critical(msg)
-            raise IOError(msg)
+            raise Exception("'{}' file does not exist in current directory {}"
+                            "or home directory {}.  Use login options.".format(
+                                CONFIG_FILE, cwd, homepath))
 
     def authenticate(self):
         """

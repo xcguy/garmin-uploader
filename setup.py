@@ -11,7 +11,8 @@ setup(
     version=open("VERSION").read().replace('\n', ''),
     author="Bastien Abadie",
     author_email="bastien@nextcairn.com",
-    description="A tool to upload FIT, GPX, and TCX files to the Garmin Connect web site.",
+    description="A tool to upload FIT, GPX, and TCX files"
+                "to the Garmin Connect web site.",
     url="https://github.com/La0/garmin-uploader",
     license="GPL",
     keywords="GARMIN CONNECT GPS TCX GPX FIT UPLOAD UPLOADER",

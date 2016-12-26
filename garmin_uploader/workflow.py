@@ -3,16 +3,19 @@ import glob
 import csv
 import time
 import six
-from garmin_uploader import logger, VALID_GARMIN_FILE_EXTENSIONS, BINARY_FILE_FORMATS
+from garmin_uploader import (
+    logger, VALID_GARMIN_FILE_EXTENSIONS, BINARY_FILE_FORMATS
+)
 from garmin_uploader.user import User
 from garmin_uploader.api import GarminAPI, GarminAPIException
+
 
 class Activity(object):
     """
     Garmin Connect Activity model
     """
     def __init__(self, path, name=None, type=None):
-        self.id = None # provided on upload
+        self.id = None  # provided on upload
         self.path = path
         self.name = name
         self.type = type
@@ -39,25 +42,25 @@ class Activity(object):
 
     @property
     def filename(self):
-
-        # Garmin Connect web site does not comply with RFC 2231.
-        # urllib3 (used by the requests module) automatically detects non-ascii
-        # characters in filenames and generates the filename* header parameter
-        # (with asterisk - signifying that the filename has non-ascii characters)
-        # instead of the filename (without asterisk) header parameter.  Garmin
-        # Connect does not accept the asterisked version of filename and there
-        # is no way to tell urllib3 to not generate it.  The work-around for
-        # Garmin's noncompliant behavior (sending non-ascii characters with the
-        # non-asterisked filename parameter) is to always send an ascii encodable
-        # filename.  This is achieved by parsing out the non-ascii characters.
+        """
+        Garmin Connect web site does not comply with RFC 2231.
+        urllib3 (used by the requests module) automatically detects non-ascii
+        characters in filenames and generates the filename* header parameter
+        (with asterisk - signifying that the filename has non-ascii characters)
+        instead of the filename (without asterisk) header parameter.  Garmin
+        Connect does not accept the asterisked version of filename and there
+        is no way to tell urllib3 to not generate it.  The work-around for
+        Garmin's noncompliant behavior (sending non-ascii characters with the
+        non-asterisked filename parameter) is to always send an ascii encodable
+        filename.  This is achieved by parsing out the non-ascii characters.
+        """
         filename = os.path.basename(self.path)
         if six.PY3:
             return filename
         try:
-          return filename.encode('ascii')
+            return filename.encode('ascii')
         except UnicodeEncodeError:
-          return filename.decode('ascii', 'ignore')
-
+            return filename.decode('ascii', 'ignore')
 
     def open(self):
         """
@@ -65,7 +68,6 @@ class Activity(object):
         """
         mode = self.extension in BINARY_FILE_FORMATS and 'rb' or 'r'
         return open(self.path, mode)
-
 
     def upload(self, user):
         """
@@ -113,7 +115,8 @@ class Workflow():
      * Upload activities
     """
 
-    def __init__(self, paths, username=None, password=None, activity_type=None, activity_name=None, verbose=3):
+    def __init__(self, paths, username=None, password=None,
+                 activity_type=None, activity_name=None, verbose=3):
         self.last_request = None
         logger.setLevel(level=verbose * 10)
 
@@ -126,17 +129,17 @@ class Workflow():
         # Load user
         self.user = User(username, password)
 
-
     def load_activities(self, paths):
         """
-        Load all activities files
+        Load all activities files:
+        Sort out file name args given on command line.  Figure out if they are
+        fitness file names, directory names containing fitness files, or names
+        of csv file lists.
+        Also, expand file name wildcards, if necessary.  Check to see if files
+        exist and if the file extension is valid.  Build lists of fitnes
+        filenames, directories # which will be further searched for files, and
+        list files.
         """
-        # Sort out file name args given on command line.  Figure out if they are fitness
-        # file names, directory names containing fitness files, or names of csv file
-        # lists.  Also, expand file name wildcards, if necessary.  Check to see if
-        # files exist and if the file extension is valid.  Build lists of fitnes
-        # filenames, directories # which will be further searched for files, and
-        # list files.
 
         def is_csv(filename):
             '''
@@ -152,19 +155,19 @@ class Workflow():
             valid activity file accepted by GC.
             '''
             if not os.path.isfile(filename):
-                logger.warning("File '{}' does not exist. Skipping...".format(filename))
+                logger.warning("File '{}' does not exist. Skipping...".format(filename))  # noqa
                 return False
 
             # Get file extension from name
             extension = os.path.splitext(filename)[1].lower()
-            logger.debug("File '{}' has extension '{}'".format(filename, extension))
+            logger.debug("File '{}' has extension '{}'".format(filename, extension))  # noqa
 
             # Valid file extensions are .tcx, .fit, and .gpx
             if extension in VALID_GARMIN_FILE_EXTENSIONS:
-                logger.debug("File '{}' extension '{}' is valid.".format(filename, extension))
+                logger.debug("File '{}' extension '{}' is valid.".format(filename, extension))  # noqa
                 return True
             else:
-                logger.warning("File '{}' extension '{}' is not valid. Skipping file...".format(filename, extension))
+                logger.warning("File '{}' extension '{}' is not valid. Skipping file...".format(filename, extension))  # noqa
                 return False
 
         valid_paths, csv_files = [], []
@@ -183,12 +186,15 @@ class Workflow():
                 # Use files in directory
                 # - Does not recursively drill into directories.
                 # - Does not search for csv files in directories.
-                valid_paths += [f for f in glob.glob(os.path.join(path, '*')) if is_activity(f)]
+                valid_paths += [
+                    f for f in glob.glob(os.path.join(path, '*'))
+                    if is_activity(f)
+                ]
 
         # Activity name given on command line only applies if a single filename
         # is given.  Otherwise, ignore.
         if len(valid_paths) != 1 and self.activity_name:
-            logger.warning('-a option valid only when one fitness file given.  Ignoring -a option.')
+            logger.warning('-a option valid only when one fitness file given. Ignoring -a option.')  # noqa
             self.activity_name = None
 
         # Build activities from valid paths
@@ -207,12 +213,10 @@ class Workflow():
                     if is_activity(row['filename'])
                 ]
 
-
         if len(activities) == 0:
             raise Exception('No valid files.')
 
         return activities
-
 
     def run(self):
         """
@@ -229,7 +233,7 @@ class Workflow():
         logger.info('All done.')
 
     def rate_limit(self):
-        min_period = 1 # I appear to been banned from Garmin Connect while determining this.
+        min_period = 1
         if not self.last_request:
             self.last_request = 0.0
 
