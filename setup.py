@@ -8,7 +8,7 @@ def requirements(path):
 
 setup(
     name="garmin_uploader",
-    version=open("VERSION").read(),
+    version=open("VERSION").read().replace('\n', ''),
     author="Bastien Abadie",
     author_email="bastien@nextcairn.com",
     description="A tool to upload FIT, GPX, and TCX files to the Garmin Connect web site.",
@@ -17,7 +17,7 @@ setup(
     keywords="GARMIN CONNECT GPS TCX GPX FIT UPLOAD UPLOADER",
     packages=['garmin_uploader'],
     install_requires=requirements('requirements.txt'),
-    test_requires=requirements('requirements-tests.txt'),
+    tests_require=requirements('requirements-tests.txt'),
     entry_points={
         'console_scripts': [
             'gupload = garmin_uploader.cli:main',
