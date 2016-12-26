@@ -2,3 +2,6 @@ build/*
 dist/*
 lib/GcpUploader.egg-info/*
 *.pyc
+.cache
+garmin_uploader.egg-info
+.eggs/
