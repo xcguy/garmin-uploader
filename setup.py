@@ -7,7 +7,7 @@ def requirements(path):
 
 
 setup(
-    name="garmin_uploader",
+    name="garmin-uploader",
     version=open("VERSION").read().replace('\n', ''),
     author="Bastien Abadie",
     author_email="bastien@nextcairn.com",
@@ -23,6 +23,9 @@ setup(
         'console_scripts': [
             'gupload = garmin_uploader.cli:main',
         ]
+    },
+    package_data={
+        'garmin_uploader': ['*.txt'],
     },
     classifiers=[
         "Development Status :: 4 - Beta",

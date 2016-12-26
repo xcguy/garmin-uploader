@@ -3,8 +3,8 @@ Garmin Uploader Release Notes
 
 Maintained by [Bastien Abadie](https://github.com/La0)
 
-Version 0.9
------------
+Version 1.0.0
+-------------
 
 Major refactoring from [GCPUploader](https://github.com/dlotton/GcpUploader) source code:
 
