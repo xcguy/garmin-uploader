@@ -294,30 +294,25 @@ class UploadGarmin:
             # Upload was successsful
             return ['SUCCESS', res["successes"][0]["internalId"]]
 
-    def set_workout_name(self, workout_id, workout_name):
+    def set_activity_name(self, activity_id, activity_name):
         encoding_headers = {"Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"} # GC really, really needs this part, otherwise it throws obscure errors like "Invalid signature for signature method HMAC-SHA1"
         self.authenticate()
-        #data = {"value": workout_name}
-        data = urlencode({"value": workout_name}).encode("UTF-8")
+        #data = {"value": activity_name}
+        data = urlencode({"value": activity_name}).encode("UTF-8")
         self._rate_limit()
-        res = self.session.post('https://connect.garmin.com/proxy/activity-service-1.0/json/name/%d' % (workout_id), data=data, headers=encoding_headers)
+        res = self.session.post('https://connect.garmin.com/proxy/activity-service-1.0/json/name/%d' % (activity_id), data=data, headers=encoding_headers)
 
         if res.status_code == 200:
             res = res.json()["display"]["value"]
-            if res == workout_name:
-                logger.info("Workout name set: %s" % workout_name)
+            if res == activity_name:
+                logger.info("activity name set: %s" % activity_name)
                 return True
             else:
-                logger.error('Workout name not set: %s' % res)
+                logger.error('activity name not set: %s' % res)
                 return False
         else:
-            logger.error('Workout name not set')
+            logger.error('activity name not set')
             return False
-
-    # This for API backward compatability
-    def name_workout(self, workout_id, workout_name):
-        logger.warning('name_workout method deprecated. Use set_workout_name instead.')
-        return self.set_workout_name(workout_id, workout_name)
 
 
     def _check_activity_type(self, activity_type):
@@ -333,7 +328,7 @@ class UploadGarmin:
         logger.error("Activity type not found")
         return False
 
-    def set_activity_type(self, workout_id, activity_type):
+    def set_activity_type(self, activity_id, activity_type):
         activity_key = self._check_activity_type(activity_type)
         if activity_key is None:
             logger.error("Activity type \'%s\' not valid" % activity_type)
@@ -342,7 +337,7 @@ class UploadGarmin:
         self.authenticate()
         #data = {"value": activity_type.encode("UTF-8")}
         self._rate_limit()
-        res = self.session.post("https://connect.garmin.com/proxy/activity-service-1.2/json/type/" + str(workout_id), data={"value": activity_key})
+        res = self.session.post("https://connect.garmin.com/proxy/activity-service-1.2/json/type/" + str(activity_id), data={"value": activity_key})
 
         if res.status_code == 200:
             res = res.json()
@@ -354,11 +349,3 @@ class UploadGarmin:
                 return True
         else:
             return False
-
-
-if __name__ == '__main__':
-    g = UploadGarmin()
-    g.login("username", "password")
-    wId = g.upload_tcx('/tmp/a.tcx')
-    wInfo = g.upload_file('/tmp/a.tcx')
-    g.name_workout(wId, "TestWorkout")

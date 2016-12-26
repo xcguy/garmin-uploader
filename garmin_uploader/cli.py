@@ -32,7 +32,7 @@ from collections import namedtuple
 from garmin_uploader import logger, uploader
 from garmin_uploader.user import User
 
-workoutTuple = namedtuple('workoutTuple', ['filename', 'name', 'type'])
+Activity = namedtuple('Activity', ['filename', 'name', 'type'])
 
 
 class Workflow():
@@ -50,8 +50,8 @@ class Workflow():
         self.activity_type = activity_type
         self.activity_name = activity_name
 
-        # Load workouts
-        self.workouts = self.load_activities(paths)
+        # Load activities
+        self.activities = self.load_activities(paths)
 
         # Load user
         self.user = User(username, password)
@@ -121,11 +121,11 @@ class Workflow():
           logger.warning('-a option valid only when one fitness file given.  Ignoring -a option.')
           self.activity_name = None
 
-      workouts = []
+      activities = []
 
-      # Build workout tuples - a workoutTuple has a filename, name, and file type
+      # Build activity tuples - a Activity has a filename, name, and file type
       for filename in filenames:
-          workouts.append(workoutTuple(filename=filename, name=self.activity_name, type=self.activity_type))
+          activities.append(Activity(filename=filename, name=self.activity_name, type=self.activity_type))
 
       # Pull in file info from csv files and apend tuples to list
       for listfile in listfiles:
@@ -133,14 +133,14 @@ class Workflow():
               reader = csv.DictReader(csvfile)
               for row in reader:
                   if self.checkFile(row['filename']):
-                    workouts.append(workoutTuple(filename=row['filename'], name=row['name'], type=row['type']))
+                    activities.append(Activity(filename=row['filename'], name=row['name'], type=row['type']))
 
 
-      if len(workouts) == 0:
+      if len(activities) == 0:
           logger.critical('No valid Files.')
           raise(IOError('No valid files.'))
 
-      return workouts
+      return activities
 
 
     def run(self):
@@ -163,26 +163,26 @@ class Workflow():
 
 
         # UPLOAD files.  Set description and file type if specified.
-        for workout in self.workouts:
-            status, id_msg = g.upload_file(workout.filename)
+        for activity in self.activities:
+            status, id_msg = g.upload_file(activity.filename)
             nstat = 'N/A'
             tstat = 'N/A'
             if status == 'SUCCESS':
-                # Set workout name if specified
-                if workout.name:
-                    if g.set_workout_name(id_msg, workout.name):
-                        nstat = workout.name
+                # Set activity name if specified
+                if activity.name:
+                    if g.set_activity_name(id_msg, activity.name):
+                        nstat = activity.name
                     else:
                         nstat = 'FAIL!'
-                # Set workout type if specified
-                if workout.type:
-                    if g.set_activity_type(id_msg, workout.type):
-                        tstat =  workout.type
+                # Set activity type if specified
+                if activity.type:
+                    if g.set_activity_type(id_msg, activity.type):
+                        tstat =  activity.type
                     else:
                         tstat =  'FAIL!'
 
             print 'File: %s    ID: %s    Status: %s    Name: %s    Type: %s' % \
-                  (workout.filename, id_msg, status, nstat, tstat)
+                  (activity.filename, id_msg, status, nstat, tstat)
 
 
 def main():
