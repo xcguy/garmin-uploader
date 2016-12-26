@@ -235,7 +235,7 @@ class GarminAPI:
             logger.error("Activity type '{}' not valid".format(activity.type))
             return False
 
-        url = '{}/{}'.format(URL_ACTIVITY_NAME, activity.id)
+        url = '{}/{}'.format(URL_ACTIVITY_TYPE, activity.id)
         data = {
             'value' : type_key,
         }

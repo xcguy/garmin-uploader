@@ -2,6 +2,7 @@ import os.path
 import glob
 import csv
 import time
+import six
 from garmin_uploader import logger, VALID_GARMIN_FILE_EXTENSIONS, BINARY_FILE_FORMATS
 from garmin_uploader.user import User
 from garmin_uploader.api import GarminAPI, GarminAPIException
@@ -18,8 +19,13 @@ class Activity(object):
 
     def __repr__(self):
         if self.id is None:
-            return self.name or self.filename
-        return '{} : {}'.format(self.id, self.name or self.filename)
+            out = self.name or self.filename
+        else:
+            out = '{} : {}'.format(self.id, self.name or self.filename)
+        if six.PY3 and isinstance(out, bytes):
+            return out.decode('utf8')
+        else:
+            return out
 
     @property
     def extension(self):
@@ -45,6 +51,8 @@ class Activity(object):
         # non-asterisked filename parameter) is to always send an ascii encodable
         # filename.  This is achieved by parsing out the non-ascii characters.
         filename = os.path.basename(self.path)
+        if six.PY3:
+            return filename
         try:
           return filename.encode('ascii')
         except UnicodeEncodeError:
@@ -161,21 +169,21 @@ class Workflow():
 
         valid_paths, csv_files = [], []
         for path in paths:
-          path = os.path.realpath(path)
-          if is_activity(path):
-            # Use file directly
-            valid_paths.append(path)
+            path = os.path.realpath(path)
+            if is_activity(path):
+                # Use file directly
+                valid_paths.append(path)
 
-          elif is_csv(path):
-              # Use file directly
-              logger.info("List file '{}' will be processed...".format(path))
-              csv_files.append(path)
+            elif is_csv(path):
+                # Use file directly
+                logger.info("List file '{}' will be processed...".format(path))
+                csv_files.append(path)
 
-          elif os.path.isdir(path):
-              # Use files in directory
-              # - Does not recursively drill into directories.
-              # - Does not search for csv files in directories.
-              valid_paths += [f for f in glob.glob(os.path.join(path, '*')) if is_activity(f)]
+            elif os.path.isdir(path):
+                # Use files in directory
+                # - Does not recursively drill into directories.
+                # - Does not search for csv files in directories.
+                valid_paths += [f for f in glob.glob(os.path.join(path, '*')) if is_activity(f)]
 
         # Activity name given on command line only applies if a single filename
         # is given.  Otherwise, ignore.
@@ -191,7 +199,7 @@ class Workflow():
 
         # Pull in file info from csv files and apppend activities
         for csv_file in csv_files:
-            with open(csv_file, 'rb') as csvfile:
+            with open(csv_file, 'r') as csvfile:
                 reader = csv.DictReader(csvfile)
                 activities += [
                     Activity(row['filename'], row['name'], row['type'])
@@ -201,8 +209,7 @@ class Workflow():
 
 
         if len(activities) == 0:
-            logger.critical('No valid Files.')
-            raise(IOError('No valid files.'))
+            raise Exception('No valid files.')
 
         return activities
 

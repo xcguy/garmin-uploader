@@ -1,5 +1,10 @@
 import os.path
-import ConfigParser
+try:
+    # Python 3
+    from configparser import ConfigParser
+except ImportError:
+    # Python 2
+    from ConfigParser import RawConfigParser as ConfigParser
 from garmin_uploader import logger, CONFIG_FILE
 from garmin_uploader.api import GarminAPI
 
@@ -29,13 +34,13 @@ class User(object):
             self.password = password
         elif os.path.isfile(configCurrentDir):
             logger.debug('Using credentials from \'%s\'.' % configCurrentDir)
-            config = ConfigParser.RawConfigParser()
+            config = ConfigParser()
             config.read(configCurrentDir)
             self.username = config.get('Credentials', 'username')
             self.password = config.get('Credentials', 'password')
         elif os.path.isfile(configHomeDir):
             logger.debug('Using credentials from \'%s\'.' % configHomeDir)
-            config = ConfigParser.RawConfigParser()
+            config = ConfigParser()
             config.read(configHomeDir)
             self.username = config.get('Credentials', 'username')
             self.password = config.get('Credentials', 'password')
