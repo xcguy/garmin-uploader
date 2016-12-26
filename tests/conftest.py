@@ -1,5 +1,12 @@
 import pytest
 
+@pytest.fixture(scope='session')
+def api():
+    """
+    Garmin API Instance
+    """
+    from garmin_uploader.api import GarminAPI
+    return GarminAPI()
 
 @pytest.fixture(scope='session')
 def empty_activities(tmpdir_factory):

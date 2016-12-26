@@ -30,7 +30,7 @@ URL_HOST_CONNECT = 'connect.garmin.com'
 URL_UPLOAD = 'https://connect.garmin.com/proxy/upload-service-1.1/json/upload'
 URL_ACTIVITY_NAME = 'https://connect.garmin.com/proxy/activity-service-1.0/json/name'
 URL_ACTIVITY_TYPE = 'https://connect.garmin.com/proxy/activity-service-1.2/json/type'
-
+URL_ACTIVITY_TYPES = 'https://connect.garmin.com/proxy/activity-service-1.2/json/activity_types'
 
 class GarminAPIException(Exception):
     """
@@ -41,6 +41,7 @@ class GarminAPI:
     """
     Low level Garmin Connect api connector
     """
+    activity_types = None
 
     def authenticate(self, username, password):
         """
@@ -205,15 +206,14 @@ class GarminAPI:
             return self.activity_types
 
         logger.debug('Fecthing activity types')
-        resp = requests.get("https://connect.garmin.com/proxy/activity-service-1.2/json/activity_types")
+        resp = requests.get(URL_ACTIVITY_TYPES)
         if not resp.ok:
             raise GarminAPIException('Failed to retrieve activity types')
-
 
         # Store as a clean dict, mapping keys and lower case common name
         types = resp.json()["dictionary"]
         out = [(t['key'], t['key']) for t in types]
-        out = [(t['display'].lower(), t['key']) for t in types]
+        out += [(t['display'].lower(), t['key']) for t in types]
         out = dict(out)
         self.activity_types = out
 
