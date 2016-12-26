@@ -1,11 +1,6 @@
     Status Output:
-        The script will output a status for each upload file; Success, FAIL, or
-  EXISTS.  Definitions are as follows:
-
-        SUCCESS = Garmin Connect indicated that the upload was successful.
-        FAIL = Garmin Connect indicated there was a problem with the upload.
-        EXISTS = Garmin Connect indicated that the workout already exists in
-                 your account.
+        The script will log infos about operations on stderr.
+        Nothing is written on stdout.
 
     Credentials:
         Username and password credentials may be placed in a configuration file
@@ -78,17 +73,17 @@
 
     Examples:
         Upload file and set activty name:
-            gupload.py -l myusername mypassword -a 'Run at park - 12/23' myfile.tcx
+            gupload -u myusername -p mypassword -a 'Run at park - 12/23' myfile.tcx
 
         Upload multiple files:
-            gupload.py -l myusername mypassword myfile1.tcx myfile2.tcx myfile3.fit
+            gupload -u myusername -p mypassword myfile1.tcx myfile2.tcx myfile3.fit
 
         Upload multiple files and set activity type for all to running:
-            gupload.py -l myusername mypassword -t "running" myfile1.tcx myfile2.tcx
+            gupload -u myusername -p mypassword -t "running" myfile1.tcx myfile2.tcx
 
         Upload files using config file for credentials and csv list file:
-            gupload.py file_list.csv
+            gupload file_list.csv
 
         Upload file using config file for credentials, name file, verbose
         output:
-            gupload.py -v 1 -a 'Run at park - 12/23' myfile.tcx
+            gupload -v 1 -a 'Run at park - 12/23' myfile.tcx
