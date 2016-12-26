@@ -8,6 +8,9 @@ if platform.system() == 'Windows':
 else:
     CONFIG_FILE = '.guploadrc'
 
+# Garmin file extensions
+VALID_GARMIN_FILE_EXTENSIONS = ('.tcx', '.fit', '.gpx')
+BINARY_FILE_FORMATS = ('.fit',)
 
 # Setup common logger
 logger = logging.getLogger('garmin_uploader')
