@@ -1,22 +1,3 @@
-# Copyright (c) David Lotton 02/2014
-#
-# License: Apache 2.0
-#
-# Information: 2/26/2014
-# Complete redesign of UploadGarmin.py due to major changes in the Garmin
-# Connect authorization scheme which rolled out in late Feb 2014. License has
-# change from previous version of this file to comply with licence of the work
-# from which this work was derived.
-#
-# THE COPYRIGHT HOLDERS AND/OR OTHER PARTIES PROVIDE THE PROGRAM
-# 'AS IS' WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESSED OR
-# IMPLIED, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
-# OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE. THE
-# ENTIRE RISK AS TO THE QUALITY AND PERFORMANCE OF THE PROGRAM
-# IS WITH YOU. SHOULD THE PROGRAM PROVE DEFECTIVE, YOU ASSUME
-# THE COST OF ALL NECESSARY SERVICING, REPAIR OR CORRECTION.
-#
-
 import requests
 import re
 from garmin_uploader import logger
