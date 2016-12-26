@@ -1,5 +1,3 @@
-
-
 def test_listing(activities_dir):
     """
     Test the activities listing used in CLI

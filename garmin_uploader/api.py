@@ -172,9 +172,9 @@ class GarminAPI:
                     # Activity already exists
                     return response["failures"][0]["internalId"], False
                 else:
-                    return GarminAPIException(response["failures"][0]["messages"])
+                    raise GarminAPIException(response["failures"][0]["messages"])
             else:
-                raise GarminAPIException('Unknown error')
+                raise GarminAPIException('Unknown error: {}'.format(response))
         else:
             # Upload was successsful
             return response["successes"][0]["internalId"], True
@@ -192,7 +192,7 @@ class GarminAPI:
         }
         res = session.post(url, data=data)
         if not res.ok:
-            raise GarminAPIException('Activity name not set')
+            raise GarminAPIException('Activity name not set: {}'.format(res.content))
 
         new_name = res.json()["display"]["value"]
         if new_name != activity.name:
@@ -241,7 +241,7 @@ class GarminAPI:
         }
         res = session.post(url, data)
         if not res.ok:
-            raise GarminAPIException('Activity type not set')
+            raise GarminAPIException('Activity type not set: {}'.format(res.content))
 
         res = res.json()
         if "activityType" not in res or res["activityType"]["key"] != type_key:

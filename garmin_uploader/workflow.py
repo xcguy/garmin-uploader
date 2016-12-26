@@ -93,6 +93,8 @@ class Activity(object):
         else:
             logger.info('Activity already uploaded {}'.format(self))
 
+        return True
+
 
 class Workflow():
     """
