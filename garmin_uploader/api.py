@@ -55,7 +55,7 @@ class GarminAPI:
         # TODO: use several UA picked randomly
         session = requests.Session()
         session.headers.update({
-            'User-Agent' :  'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:48.0) Gecko/20100101 Firefox/50.0',
+            'User-Agent' : 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:48.0) Gecko/20100101 Firefox/50.0',
         })
 
         # Request sso hostname
@@ -133,7 +133,6 @@ class GarminAPI:
 
         # Second auth step
         # Needs a service ticket from previous response
-        # Currently gives 3 302 redirects until a 404 :/
         headers = {
             'Host' : URL_HOST_CONNECT,
         }

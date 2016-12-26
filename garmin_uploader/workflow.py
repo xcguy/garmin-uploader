@@ -209,7 +209,8 @@ class Workflow():
         Authenticated part of the workflow
         Simply login & upload every activity
         """
-        self.user.authenticate()
+        if not self.user.authenticate():
+            raise Exception('Invalid credentials')
 
         for activity in self.activities:
             self.rate_limit()

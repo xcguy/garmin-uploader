@@ -9,6 +9,18 @@ def api():
     return GarminAPI()
 
 @pytest.fixture(scope='session')
+def user():
+    """
+    Garmin Connect test user
+    """
+    from garmin_uploader.user import User
+
+    # please do not abuse this account...
+    login = 'guploader@yopmail.com'
+    password = 'GuploaderTest51'[::-1]
+    return User(login, password)
+
+@pytest.fixture(scope='session')
 def activities_dir(tmpdir_factory):
     """
     Build empty activities file
