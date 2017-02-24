@@ -10,7 +10,7 @@ URL_SESSION = 'https://connect.garmin.com/legacy/session'
 URL_HOST_SSO = 'sso.garmin.com'
 URL_HOST_CONNECT = 'connect.garmin.com'
 URL_UPLOAD = 'https://connect.garmin.com/modern/proxy/upload-service/upload'
-URL_ACTIVITY_NAME = 'https://connect.garmin.com/proxy/activity-service-1.0/json/name'  # noqa
+URL_ACTIVITY_BASE = 'https://connect.garmin.com/modern/proxy/activity-service/activity'  # noqa
 URL_ACTIVITY_TYPE = 'https://connect.garmin.com/proxy/activity-service-1.2/json/type'  # noqa
 URL_ACTIVITY_TYPES = 'https://connect.garmin.com/proxy/activity-service-1.2/json/activity_types'  # noqa
 
@@ -26,6 +26,11 @@ class GarminAPI:
     Low level Garmin Connect api connector
     """
     activity_types = None
+
+    # This strange header is needed to get auth working
+    common_headers = {
+        'NK': 'NT',
+    }
 
     def authenticate(self, username, password):
         """
@@ -153,17 +158,12 @@ class GarminAPI:
         """
         assert activity.id is None
 
-        # This strange header is needed to get auth working
-        headers = {
-            'NK': 'NT',
-        }
-
         # Upload file as multipart form
         files = {
             "file": (activity.filename, activity.open()),
         }
         url = '{}/{}'.format(URL_UPLOAD, activity.extension)
-        res = session.post(url, files=files, headers=headers)
+        res = session.post(url, files=files, headers=self.common_headers)
 
         # HTTP Status can either be OK or Conflict
         if res.status_code not in (200, 201, 409):
@@ -190,16 +190,15 @@ class GarminAPI:
         assert activity.id is not None
         assert activity.name is not None
 
-        url = '{}/{}'.format(URL_ACTIVITY_NAME, activity.id)
+        url = '{}/{}'.format(URL_ACTIVITY_BASE, activity.id)
         data = {
-            'value': activity.name,
+            'activityId': activity.id,
+            'activityName': activity.name,
         }
-        res = session.post(url, data=data)
+        headers = dict(self.common_headers)  # clone
+        headers['X-HTTP-Method-Override'] = 'PUT'  # weird. again.
+        res = session.post(url, json=data, headers=headers)
         if not res.ok:
-            raise GarminAPIException('Activity name not set: {}'.format(res.content))  # noqa
-
-        new_name = res.json()["display"]["value"]
-        if new_name != activity.name:
             raise GarminAPIException('Activity name not set: {}'.format(res.content))  # noqa
 
     def load_activity_types(self):

@@ -1,3 +1,6 @@
+import uuid
+
+
 def test_types(api):
     """
     Test activity types listing
@@ -11,3 +14,20 @@ def test_types(api):
     assert 'track_cycling' in types
     assert 'track cycling' in types
     assert types['track_cycling'] == types['track cycling']
+
+
+def test_rename(api, user, sample_activity):
+    """
+    Test renaming of a sample activity
+    """
+    assert user.authenticate()
+
+    # Need to upload to get activity id
+    sample_activity.id, _ = api.upload_activity(user.session, sample_activity)
+
+    # Call rename api
+    sample_activity.name = 'Test rename {}'.format(str(uuid.uuid4()))
+    api.set_activity_name(user.session, sample_activity)
+
+    # Cleanup
+    sample_activity.id = None

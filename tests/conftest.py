@@ -1,4 +1,5 @@
 import pytest
+import os
 
 
 @pytest.fixture(scope='session')
@@ -56,3 +57,13 @@ def activities_dir(tmpdir_factory):
 
     # Cleanup
     workdir.remove()
+
+
+@pytest.fixture(scope='session')
+def sample_activity():
+    """
+    Load a sample activity
+    """
+    from garmin_uploader.workflow import Activity
+    tcx = os.path.join(os.path.dirname(__file__), 'sample_file.tcx')
+    return Activity(str(tcx), 'Test upload', 'running')
