@@ -2,13 +2,14 @@ import requests
 import re
 from garmin_uploader import logger
 
-URL_HOSTNAME = 'https://connect.garmin.com/gauth/hostname'
+URL_HOSTNAME = 'https://connect.garmin.com/modern/auth/hostname'
 URL_LOGIN = 'https://sso.garmin.com/sso/login'
-URL_POST_LOGIN = 'https://connect.garmin.com/post-auth/login'
+URL_POST_LOGIN = 'https://connect.garmin.com/modern/'
 URL_CHECK_LOGIN = 'https://connect.garmin.com/user/username'
+URL_SESSION = 'https://connect.garmin.com/legacy/session'
 URL_HOST_SSO = 'sso.garmin.com'
 URL_HOST_CONNECT = 'connect.garmin.com'
-URL_UPLOAD = 'https://connect.garmin.com/proxy/upload-service-1.1/json/upload'
+URL_UPLOAD = 'https://connect.garmin.com/modern/proxy/upload-service/upload'
 URL_ACTIVITY_NAME = 'https://connect.garmin.com/proxy/activity-service-1.0/json/name'  # noqa
 URL_ACTIVITY_TYPE = 'https://connect.garmin.com/proxy/activity-service-1.2/json/type'  # noqa
 URL_ACTIVITY_TYPES = 'https://connect.garmin.com/proxy/activity-service-1.2/json/activity_types'  # noqa
@@ -45,36 +46,37 @@ class GarminAPI:
         resp = session.get(URL_HOSTNAME)
         if not resp.ok:
             raise Exception('Invalid SSO first request status code {}'.format(resp.status_code))  # noqa
+        sso_hostname = resp.json().get('host')
 
-        sso_hostname = resp.json().get('host', None).rstrip('.garmin.com')
         # Load login page to get login ticket
+        # Full parameters from Firebug, we have to maintain
+        # Fuck this shit.
+        # Who needs mandatory urls in a request parameters !
         params = {
-              'clientId': 'GarminConnect',
-              'webhost': sso_hostname,
-
-              # Full parameters from Firebug
-              # Fuck this shit.
-              # Who needs mandatory urls in a request parameters !
-              'consumeServiceTicket': 'false',
-              'createAccountShown': 'true',
-              'cssUrl': 'https://static.garmincdn.com/com.garmin.connect/ui/css/gauth-custom-v1.2-min.css',  # noqa
-              'displayNameShown': 'false',
-              'embedWidget': 'false',
-              'gauthHost': 'https://sso.garmin.com/sso',
-              'generateExtraServiceTicket': 'false',
-              'globalOptInChecked': 'false',
-              'globalOptInShown': 'false',
-              'id': 'gauth-widget',
-              'initialFocus': 'true',
-              'locale': 'fr',
-              'openCreateAlcount': 'false',
-              'redirectAfterAccountCreationUrl': 'https://connect.garmin.com/post-auth/login',  # noqa
-              'redirectAfterAccountLoginUrl': 'https://connect.garmin.com/post-auth/login',  # noqa
-              'rememberMeChecked': 'false',
-              'rememberMeShown': 'true',
-              'service': 'https://connect.garmin.com/post-auth/login',
-              'source': 'https://connect.garmin.com/fr-FR/signin',
-              'usernameShown': 'false',
+            'clientId': 'GarminConnect',
+            'connectLegalTerms': 'true',
+            'consumeServiceTicket': 'false',
+            'createAccountShown': 'true',
+            'cssUrl': 'https://static.garmincdn.com/com.garmin.connect/ui/css/gauth-custom-v1.2-min.css',  # noqa
+            'displayNameShown': 'false',
+            'embedWidget': 'false',
+            'gauthHost': 'https://sso.garmin.com/sso',
+            'generateExtraServiceTicket': 'false',
+            'globalOptInChecked': 'false',
+            'globalOptInShown': 'false',
+            'id': 'gauth-widget',
+            'initialFocus': 'true',
+            'locale': 'fr',
+            'openCreateAccount': 'false',
+            'privacyStatementUrl': '//connect.garmin.com/fr-FR/privacy/',
+            'redirectAfterAccountCreationUrl': 'https://connect.garmin.com/modern/',  # noqa
+            'redirectAfterAccountLoginUrl': 'https://connect.garmin.com/modern/',  # noqa
+            'rememberMeChecked': 'false',
+            'rememberMeShown': 'true',
+            'service': 'https://connect.garmin.com/modern/',
+            'source': 'https://connect.garmin.com/fr-FR/signin',
+            'usernameShown': 'false',
+            'webhost': sso_hostname
         }
         res = session.get(URL_LOGIN, params=params)
         if res.status_code != 200:
@@ -106,6 +108,10 @@ class GarminAPI:
         if res.status_code != 200:
             raise Exception('Authentification failed.')
 
+        # Check we have sso guid in cookies
+        if 'GARMIN-SSO-GUID' not in session.cookies:
+            raise Exception('Missing Garmin auth cookie')
+
         # Try to find the full post login url in response
         regex = 'var response_url(\s+)= \'.*?ticket=(?P<ticket>[\w\-]+)\''
         params = {}
@@ -113,7 +119,7 @@ class GarminAPI:
         if not matches:
             raise Exception('Missing service ticket')
         params['ticket'] = matches.group('ticket')
-        logger.debug('Found service ticket %s', params['ticket'])
+        logger.debug('Found service ticket {}'.format(params['ticket']))
 
         # Second auth step
         # Needs a service ticket from previous response
@@ -124,12 +130,19 @@ class GarminAPI:
         if res.status_code != 200 and not res.history:
             raise Exception('Second auth step failed.')
 
+        # Get Jsessionid
+        res = session.get(URL_SESSION)
+        res.raise_for_status()
+        if 'JSESSIONID' not in session.cookies:
+            raise Exception('Missing jsession auth cookie')
+
         # Check login
         res = session.get(URL_CHECK_LOGIN)
         garmin_user = res.json()
-        if not garmin_user.get('username', None):
+        username = garmin_user.get('username')
+        if not res.ok or not username:
             raise Exception("Login check failed.")
-        logger.info('Logged in as %s' % (garmin_user['username']))
+        logger.info('Logged in as {}'.format(username))
 
         return session
 
@@ -140,12 +153,20 @@ class GarminAPI:
         """
         assert activity.id is None
 
+        # This strange header is needed to get auth working
+        headers = {
+            'NK': 'NT',
+        }
+
+        # Upload file as multipart form
         files = {
-            "data": (activity.filename, activity.open()),
+            "file": (activity.filename, activity.open()),
         }
         url = '{}/{}'.format(URL_UPLOAD, activity.extension)
-        res = session.post(url, files=files)
-        if not res.ok:
+        res = session.post(url, files=files, headers=headers)
+
+        # HTTP Status can either be OK or Conflict
+        if res.status_code not in (200, 201, 409):
             raise GarminAPIException('Failed to upload {}'.format(activity))
 
         response = res.json()['detailedImportResult']
