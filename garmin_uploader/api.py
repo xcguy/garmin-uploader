@@ -72,6 +72,7 @@ class GarminAPI:
             'id': 'gauth-widget',
             'initialFocus': 'true',
             'locale': 'fr',
+            'mobile': 'false',
             'openCreateAccount': 'false',
             'privacyStatementUrl': '//connect.garmin.com/fr-FR/privacy/',
             'redirectAfterAccountCreationUrl': 'https://connect.garmin.com/modern/',  # noqa
@@ -83,25 +84,14 @@ class GarminAPI:
             'usernameShown': 'false',
             'webhost': sso_hostname
         }
+
         res = session.get(URL_LOGIN, params=params)
         if res.status_code != 200:
             raise Exception('No login form')
 
-        # Get the login ticket value
-        regex = '<input\s+type="hidden"\s+name="lt"\s+value="(?P<lt>\w+)"\s+/>'
-        res = re.search(regex, res.text)
-        if not res:
-            raise Exception('No login ticket')
-        login_ticket = res.group('lt')
-        logger.debug('Found login ticket %s', login_ticket)
-
         # Login/Password with login ticket
         data = {
-          # All parameters are needed
-          '_eventId': 'submit',
-          'displayNameRequired': 'false',
-          'embed': 'true',
-          'lt': login_ticket,
+          'embed': 'false',
           'username': username,
           'password': password,
         }
@@ -118,7 +108,7 @@ class GarminAPI:
             raise Exception('Missing Garmin auth cookie')
 
         # Try to find the full post login url in response
-        regex = 'var response_url(\s+)= \'.*?ticket=(?P<ticket>[\w\-]+)\''
+        regex = 'var response_url(\s+)= (\"|\').*?ticket=(?P<ticket>[\w\-]+)(\"|\')'
         params = {}
         matches = re.search(regex, res.text)
         if not matches:
