@@ -1,5 +1,6 @@
 import argparse
 import os.path
+import sys
 from garmin_uploader.workflow import Workflow
 
 
@@ -60,9 +61,15 @@ def main():
 
     # Run workflow with these options
     options = parser.parse_args()
-    workflow = Workflow(**vars(options))
-    workflow.run()
+    try:
+        workflow = Workflow(**vars(options))
+        workflow.run()
+    except:
+        return 1  # erroneous exit code
+
+    return 0
 
 
 if __name__ == '__main__':
-    main()
+    exit = main()
+    sys.exit(exit)

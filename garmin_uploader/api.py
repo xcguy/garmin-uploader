@@ -108,7 +108,7 @@ class GarminAPI:
             raise Exception('Missing Garmin auth cookie')
 
         # Try to find the full post login url in response
-        regex = 'var response_url(\s+)= (\"|\').*?ticket=(?P<ticket>[\w\-]+)(\"|\')'
+        regex = 'var response_url(\s+)= (\"|\').*?ticket=(?P<ticket>[\w\-]+)(\"|\')'  # noqa
         params = {}
         matches = re.search(regex, res.text)
         if not matches:
