@@ -64,7 +64,8 @@ def main():
     try:
         workflow = Workflow(**vars(options))
         workflow.run()
-    except:
+    except Exception as e:
+        print('Error: {}'.format(e))
         return 1  # erroneous exit code
 
     return 0
