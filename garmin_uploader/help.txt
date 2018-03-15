@@ -57,19 +57,37 @@
         The following list of activity types should be valid for setting
         your activity type on Garmin Connect...
 
-        running, street_running, track_running, trail_running,
-        treadmill_running, cycling, cyclocross, downhill_biking, indoor_cycling,
-        mountain_biking, recumbent_cycling, road_biking, track_cycling,
-        fitness_equipment, elliptical, , indoor_cardio, indoor_rowing,
-        stair_climbing, strength_training, hiking, swimming, lap_swimming,
-        open_water_swimming, walking, casual_walking, speed_walking, transition,
-        swimToBikeTransition, bikeToRunTransition, runToBikeTransition,
-        motorcycling, other, backcountry_skiing_snowboarding, boating,
-        cross_country_skiing, driving_general, flying, golf, horseback_riding,
-        inline_skating, mountaineering, paddling, resort_skiing_snowboarding,
-        rowing, sailing, skate_skiing, skating, snowmobiling, snow_shoe,
-        stand_up_paddleboarding, whitewater_rafting_kayaking, wind_kite_surfing.
+        uncategorized
 
+        cycling, bmx, cyclocross, downhill_biking, gravel_cycling,
+        indoor_cycling, mountain_biking, recumbent_cycling, road_biking,
+        track_cycling, virtual_ride
+
+        running, indoor_running, obstacle_run, street_running, track_running,
+        trail_running, treadmill_running, virtual_run
+
+        fitness_equipment, elliptical, indoor_cardio, indoor_rowing,
+        stair_climbing, strength_training
+
+        hiking, walking, casual_walking, speed_walking
+
+        swimming, lap_swimming, open_water_swimming
+
+        other, backcountry_skiing_snowboarding, boating, cross_country_skiing,
+        driving_general, floor_climbing, flying, golf, hang_gliding,
+        horseback_riding, hunting_fishing, inline_skating, mountaineering,
+        paddling, rc_drone, resort_skiing_snowboarding, rock_climbing, rowing,
+        sailing, skate_skiing, skating, sky_diving, snow_shoe, snowmobiling,
+        stand_up_paddleboarding, stop_watch, surfing, tennis, wakeboarding,
+        whitewater_rafting_kayaking, wind_kite_surfing, wingsuit_flying, yoga
+
+        transition, bikeToRunTransition, runToBikeTransition,
+        swimToBikeTransition
+
+        motorcycling, atv, motocross
+
+        diving, apnea_diving, apnea_hunting, gauge_diving, multi_gas_diving,
+        single_gas_diving
 
     Examples:
         Upload file and set activty name:
