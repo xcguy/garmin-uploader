@@ -11,8 +11,7 @@ URL_HOST_SSO = 'sso.garmin.com'
 URL_HOST_CONNECT = 'connect.garmin.com'
 URL_UPLOAD = 'https://connect.garmin.com/modern/proxy/upload-service/upload'
 URL_ACTIVITY_BASE = 'https://connect.garmin.com/modern/proxy/activity-service/activity'  # noqa
-URL_ACTIVITY_TYPE = 'https://connect.garmin.com/proxy/activity-service-1.2/json/type'  # noqa
-URL_ACTIVITY_TYPES = 'https://connect.garmin.com/proxy/activity-service-1.2/json/activity_types'  # noqa
+URL_ACTIVITY_TYPES = 'https://connect.garmin.com/modern/proxy/activity-service/activity/activityTypes' # noqa
 
 
 class GarminAPIException(Exception):
@@ -199,17 +198,14 @@ class GarminAPI:
         if self.activity_types:
             return self.activity_types
 
-        logger.debug('Fecthing activity types')
+        logger.debug('Fetching activity types')
         resp = requests.get(URL_ACTIVITY_TYPES)
         if not resp.ok:
             raise GarminAPIException('Failed to retrieve activity types')
 
         # Store as a clean dict, mapping keys and lower case common name
-        types = resp.json()["dictionary"]
-        out = [(t['key'], t['key']) for t in types]
-        out += [(t['display'].lower(), t['key']) for t in types]
-        out = dict(out)
-        self.activity_types = out
+        types = resp.json()
+        self.activity_types = {t['typeKey']: t for t in types}
 
         logger.debug('Fetched {} activity types'.format(len(self.activity_types)))  # noqa
         return self.activity_types
@@ -228,14 +224,13 @@ class GarminAPI:
             logger.error("Activity type '{}' not valid".format(activity.type))
             return False
 
-        url = '{}/{}'.format(URL_ACTIVITY_TYPE, activity.id)
+        url = '{}/{}'.format(URL_ACTIVITY_BASE, activity.id)
         data = {
-            'value': type_key,
+            'activityId': activity.id,
+            'activityTypeDTO': type_key
         }
-        res = session.post(url, data)
+        headers = dict(self.common_headers)  # clone
+        headers['X-HTTP-Method-Override'] = 'PUT'  # weird. again.
+        res = session.post(url, json=data, headers=headers)
         if not res.ok:
-            raise GarminAPIException('Activity type not set: {}'.format(res.content))  # noqa
-
-        res = res.json()
-        if "activityType" not in res or res["activityType"]["key"] != type_key:
             raise GarminAPIException('Activity type not set: {}'.format(res.content))  # noqa
