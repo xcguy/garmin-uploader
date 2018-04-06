@@ -12,8 +12,6 @@ def test_types(api):
     assert 'all' in types
     assert 'running' in types
     assert 'track_cycling' in types
-    assert 'track cycling' in types
-    assert types['track_cycling'] == types['track cycling']
 
 
 def test_rename(api, user, sample_activity):
