@@ -3,6 +3,18 @@ Garmin Uploader Release Notes
 
 Maintained by [Bastien Abadie](https://github.com/La0)
 
+Version 1.0.4
+-------------
+
+ * Update authentication workfow (issue #10)
+ * Fix activity type listing/update, by @lmunch (issue #8)
+
+Version 1.0.3
+-------------
+
+ * Update authentication workfow (issue #7)
+ * Use system exit codes (issue #4)
+
 Version 1.0.2
 -------------
 
