@@ -5,7 +5,7 @@ from garmin_uploader import logger
 URL_HOSTNAME = 'https://connect.garmin.com/modern/auth/hostname'
 URL_LOGIN = 'https://sso.garmin.com/sso/login'
 URL_POST_LOGIN = 'https://connect.garmin.com/modern/'
-URL_PROFILE = 'https://connect.garmin.com/modern/proxy/userprofile-service/socialProfile/'
+URL_PROFILE = 'https://connect.garmin.com/modern/proxy/userprofile-service/socialProfile/'  # noqa
 URL_HOST_SSO = 'sso.garmin.com'
 URL_HOST_CONNECT = 'connect.garmin.com'
 URL_UPLOAD = 'https://connect.garmin.com/modern/proxy/upload-service/upload'
