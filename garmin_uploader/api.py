@@ -5,8 +5,7 @@ from garmin_uploader import logger
 URL_HOSTNAME = 'https://connect.garmin.com/modern/auth/hostname'
 URL_LOGIN = 'https://sso.garmin.com/sso/login'
 URL_POST_LOGIN = 'https://connect.garmin.com/modern/'
-URL_CHECK_LOGIN = 'https://connect.garmin.com/user/username'
-URL_SESSION = 'https://connect.garmin.com/legacy/session'
+URL_PROFILE = 'https://connect.garmin.com/modern/proxy/userprofile-service/socialProfile/'
 URL_HOST_SSO = 'sso.garmin.com'
 URL_HOST_CONNECT = 'connect.garmin.com'
 URL_UPLOAD = 'https://connect.garmin.com/modern/proxy/upload-service/upload'
@@ -125,19 +124,18 @@ class GarminAPI:
         if res.status_code != 200 and not res.history:
             raise Exception('Second auth step failed.')
 
-        # Get Jsessionid
-        res = session.get(URL_SESSION)
-        res.raise_for_status()
+        # Check session cookie
+        if 'SESSIONID' not in session.cookies:
+            raise Exception('Missing session auth cookie')
         if 'JSESSIONID' not in session.cookies:
             raise Exception('Missing jsession auth cookie')
 
         # Check login
-        res = session.get(URL_CHECK_LOGIN)
-        garmin_user = res.json()
-        username = garmin_user.get('username')
-        if not res.ok or not username:
+        res = session.get(URL_PROFILE)
+        if not res.ok:
             raise Exception("Login check failed.")
-        logger.info('Logged in as {}'.format(username))
+        garmin_user = res.json()
+        logger.info('Logged in as {}'.format(garmin_user['fullName']))
 
         return session
 
