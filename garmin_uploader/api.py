@@ -1,4 +1,5 @@
 import requests
+
 import re
 from garmin_uploader import logger
 
@@ -126,8 +127,6 @@ class GarminAPI:
         # Check session cookie
         if 'SESSIONID' not in session.cookies:
             raise Exception('Missing session auth cookie')
-        if 'JSESSIONID' not in session.cookies:
-            raise Exception('Missing jsession auth cookie')
 
         # Check login
         res = session.get(URL_PROFILE)
