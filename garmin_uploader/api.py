@@ -153,6 +153,8 @@ class GarminAPI:
 
         # HTTP Status can either be OK or Conflict
         if res.status_code not in (200, 201, 409):
+            if res.status_code == 412:
+                logger.error('You may have to give explicit consent for uploading files to Garmin')
             raise GarminAPIException('Failed to upload {}'.format(activity))
 
         response = res.json()['detailedImportResult']
