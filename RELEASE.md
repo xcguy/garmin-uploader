@@ -3,6 +3,11 @@ Garmin Uploader Release Notes
 
 Maintained by [Bastien Abadie](https://github.com/La0)
 
+Version 1.0.5
+-------------
+
+ * Remove check on some deprecated headers (issue #12)
+
 Version 1.0.4
 -------------
 
