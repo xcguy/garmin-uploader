@@ -125,7 +125,7 @@ class GarminAPI:
             raise Exception('Second auth step failed.')
 
         # Check session cookie
-        if 'SESSIONID' not in session.cookies:
+        if 'JSESSIONID' not in session.cookies:
             raise Exception('Missing session auth cookie')
 
         # Check login
