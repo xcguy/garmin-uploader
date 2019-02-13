@@ -3,6 +3,11 @@ Garmin Uploader Release Notes
 
 Maintained by [Bastien Abadie](https://github.com/La0)
 
+Version 1.0.6
+-------------
+
+ * Update authentification cookie key name
+
 Version 1.0.5
 -------------
 
