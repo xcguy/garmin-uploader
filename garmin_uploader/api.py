@@ -9,6 +9,7 @@ URL_POST_LOGIN = 'https://connect.garmin.com/modern/'
 URL_PROFILE = 'https://connect.garmin.com/modern/proxy/userprofile-service/socialProfile/'  # noqa
 URL_HOST_SSO = 'sso.garmin.com'
 URL_HOST_CONNECT = 'connect.garmin.com'
+URL_SSO_SIGNIN = 'https://sso.garmin.com/sso/signin'
 URL_UPLOAD = 'https://connect.garmin.com/modern/proxy/upload-service/upload'
 URL_ACTIVITY_BASE = 'https://connect.garmin.com/modern/proxy/activity-service/activity'  # noqa
 URL_ACTIVITY_TYPES = 'https://connect.garmin.com/modern/proxy/activity-service/activity/activityTypes' # noqa
@@ -65,41 +66,52 @@ class GarminAPI:
             'displayNameShown': 'false',
             'embedWidget': 'false',
             'gauthHost': 'https://sso.garmin.com/sso',
-            'generateExtraServiceTicket': 'false',
+            'generateExtraServiceTicket': 'true',
+            'generateNoServiceTicket': 'false',
+            'generateTwoExtraServiceTickets': 'false',
             'globalOptInChecked': 'false',
-            'globalOptInShown': 'false',
+            'globalOptInShown': 'true',
             'id': 'gauth-widget',
             'initialFocus': 'true',
             'locale': 'fr',
+            'locationPromptShown': 'true',
             'mobile': 'false',
             'openCreateAccount': 'false',
-            'privacyStatementUrl': '//connect.garmin.com/fr-FR/privacy/',
+            'privacyStatementUrl': 'https://www.garmin.com/fr/privacy/connect/',  # noqa
             'redirectAfterAccountCreationUrl': 'https://connect.garmin.com/modern/',  # noqa
             'redirectAfterAccountLoginUrl': 'https://connect.garmin.com/modern/',  # noqa
             'rememberMeChecked': 'false',
             'rememberMeShown': 'true',
             'service': 'https://connect.garmin.com/modern/',
-            'source': 'https://connect.garmin.com/fr-FR/signin',
-            'usernameShown': 'false',
-            'webhost': sso_hostname
+            'showPassword': 'true',
+            'source': 'https://connect.garmin.com/signin/',
+            'webhost': sso_hostname,
         }
-
         res = session.get(URL_LOGIN, params=params)
         if res.status_code != 200:
             raise Exception('No login form')
+
+        # Lookup for CSRF token
+        csrf = re.search(r'<input type="hidden" name="_csrf" value="(\w+)" />', res.content)  # noqa
+        if csrf is None:
+            raise Exception('No CSRF token')
+        csrf_token = csrf.group(1)
+        logger.debug('Found CSRF token {}'.format(csrf_token))
 
         # Login/Password with login ticket
         data = {
           'embed': 'false',
           'username': username,
           'password': password,
+          '_csrf': csrf_token,
         }
         headers = {
           'Host': URL_HOST_SSO,
+          'Referer': URL_SSO_SIGNIN,
         }
         res = session.post(URL_LOGIN, params=params, data=data,
                            headers=headers)
-        if res.status_code != 200:
+        if not res.ok:
             raise Exception('Authentification failed.')
 
         # Check we have sso guid in cookies
@@ -123,10 +135,6 @@ class GarminAPI:
         res = session.get(URL_POST_LOGIN, params=params, headers=headers)
         if res.status_code != 200 and not res.history:
             raise Exception('Second auth step failed.')
-
-        # Check session cookie
-        if 'JSESSIONID' not in session.cookies:
-            raise Exception('Missing session auth cookie')
 
         # Check login
         res = session.get(URL_PROFILE)
