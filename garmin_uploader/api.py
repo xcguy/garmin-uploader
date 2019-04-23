@@ -92,7 +92,7 @@ class GarminAPI:
             raise Exception('No login form')
 
         # Lookup for CSRF token
-        csrf = re.search(r'<input type="hidden" name="_csrf" value="(\w+)" />', res.content)  # noqa
+        csrf = re.search(r'<input type="hidden" name="_csrf" value="(\w+)" />', res.content.decode('utf-8'))  # noqa
         if csrf is None:
             raise Exception('No CSRF token')
         csrf_token = csrf.group(1)
