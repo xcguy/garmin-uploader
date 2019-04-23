@@ -3,6 +3,11 @@ Garmin Uploader Release Notes
 
 Maintained by [Bastien Abadie](https://github.com/La0)
 
+Version 1.0.7
+-------------
+
+ * Update authentification procol (CSRF & Referer, issue #13)
+
 Version 1.0.6
 -------------
 
