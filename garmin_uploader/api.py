@@ -115,6 +115,8 @@ class GarminAPI:
             raise Exception('Authentification failed.')
 
         # Check we have sso guid in cookies
+        for cookie in session.cookies:
+            logger.debug("Found Cookie {} = {}".format(cookie.name, cookie.value))
         if 'GARMIN-SSO-GUID' not in session.cookies:
             raise Exception('Missing Garmin auth cookie')
 
