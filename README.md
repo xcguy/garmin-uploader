@@ -24,7 +24,7 @@ You can install garmin-uploader as any othe package availale on PyPi with pip:
 
 On Linux
 ```
-sudo pip install garmin-uploader
+pip install garmin-uploader --user
 ```
 
 On Windows
