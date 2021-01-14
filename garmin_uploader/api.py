@@ -9,7 +9,6 @@ URL_POST_LOGIN = 'https://connect.garmin.com/modern/'
 URL_PROFILE = 'https://connect.garmin.com/modern/proxy/userprofile-service/socialProfile/'  # noqa
 URL_HOST_SSO = 'sso.garmin.com'
 URL_HOST_CONNECT = 'connect.garmin.com'
-URL_SSO_SIGNIN = 'https://sso.garmin.com/sso/signin'
 URL_UPLOAD = 'https://connect.garmin.com/modern/proxy/upload-service/upload'
 URL_ACTIVITY_BASE = 'https://connect.garmin.com/modern/proxy/activity-service/activity'  # noqa
 URL_ACTIVITY_TYPES = 'https://connect.garmin.com/modern/proxy/activity-service/activity/activityTypes' # noqa
@@ -46,13 +45,6 @@ class GarminAPI:
             'User-Agent': 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:48.0) Gecko/20100101 Firefox/50.0',  # noqa
         })
 
-        # Request sso hostname
-        sso_hostname = None
-        resp = session.get(URL_HOSTNAME)
-        if not resp.ok:
-            raise Exception('Invalid SSO first request status code {}'.format(resp.status_code))  # noqa
-        sso_hostname = resp.json().get('host')
-
         # Load login page to get login ticket
         # Full parameters from Firebug, we have to maintain
         # Fuck this shit.
@@ -73,12 +65,12 @@ class GarminAPI:
             'globalOptInShown': 'true',
             'id': 'gauth-widget',
             'initialFocus': 'true',
-            'locale': 'fr_FR',
+            'locale': 'en_US',
             'locationPromptShown': 'true',
             'mfaRequired': 'false',
             'mobile': 'false',
             'openCreateAccount': 'false',
-            'privacyStatementUrl': 'https://www.garmin.com/fr-FR/privacy/connect/',
+            'privacyStatementUrl': 'https://www.garmin.com/en-US/privacy/connect/',
             'redirectAfterAccountCreationUrl': 'https://connect.garmin.com/modern/',
             'redirectAfterAccountLoginUrl': 'https://connect.garmin.com/modern/',
             'rememberMeChecked': 'false',
@@ -90,9 +82,9 @@ class GarminAPI:
             'showPassword': 'true',
             'showPrivacyPolicy': 'false',
             'showTermsOfUse': 'false',
-            'source': 'https://connect.garmin.com/signin/',
+            'source': 'https://connect.garmin.com/signin',
             'useCustomHeader': 'false',
-            'webhost': sso_hostname,
+            'webhost': 'https://connect.garmin.com/modern/',
         }
         res = session.get(URL_LOGIN, params=params)
         if res.status_code != 200:
@@ -114,7 +106,7 @@ class GarminAPI:
         }
         headers = {
           'Host': URL_HOST_SSO,
-          'Referer': URL_SSO_SIGNIN,
+          'Referer': res.url,
         }
         res = session.post(URL_LOGIN, params=params, data=data,
                            headers=headers)
