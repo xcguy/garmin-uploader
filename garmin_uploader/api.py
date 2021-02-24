@@ -6,7 +6,7 @@ from garmin_uploader import logger
 URL_HOSTNAME = 'https://connect.garmin.com/modern/auth/hostname'
 URL_LOGIN = 'https://sso.garmin.com/sso/login'
 URL_POST_LOGIN = 'https://connect.garmin.com/modern/'
-URL_PROFILE = 'https://connect.garmin.com/modern/proxy/userprofile-service/socialProfile/'  # noqa
+URL_PROFILE = 'https://connect.garmin.com/modern/currentuser-service/user/info'  # noqa
 URL_HOST_SSO = 'sso.garmin.com'
 URL_HOST_CONNECT = 'connect.garmin.com'
 URL_SSO_SIGNIN = 'https://sso.garmin.com/sso/signin'
@@ -148,7 +148,7 @@ class GarminAPI:
         if not res.ok:
             raise Exception("Login check failed.")
         garmin_user = res.json()
-        logger.info('Logged in as {}'.format(garmin_user['fullName']))
+        logger.info('Logged in as {}'.format(garmin_user['username']))
 
         return session
 
@@ -213,7 +213,7 @@ class GarminAPI:
             return self.activity_types
 
         logger.debug('Fetching activity types')
-        resp = requests.get(URL_ACTIVITY_TYPES)
+        resp = requests.get(URL_ACTIVITY_TYPES, headers=self.common_headers)
         if not resp.ok:
             raise GarminAPIException('Failed to retrieve activity types')
 
