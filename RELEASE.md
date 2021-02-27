@@ -3,6 +3,11 @@ Garmin Uploader Release Notes
 
 Maintained by [Bastien Abadie](https://github.com/La0)
 
+Version 1.0.9
+-------------
+
+ * Update authentification protocol (API urls, issue #22)
+
 Version 1.0.8
 -------------
 
