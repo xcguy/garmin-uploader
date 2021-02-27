@@ -78,9 +78,9 @@ class GarminAPI:
             'mfaRequired': 'false',
             'mobile': 'false',
             'openCreateAccount': 'false',
-            'privacyStatementUrl': 'https://www.garmin.com/fr-FR/privacy/connect/',
-            'redirectAfterAccountCreationUrl': 'https://connect.garmin.com/modern/',
-            'redirectAfterAccountLoginUrl': 'https://connect.garmin.com/modern/',
+            'privacyStatementUrl': 'https://www.garmin.com/fr-FR/privacy/connect/',  # noqa
+            'redirectAfterAccountCreationUrl': 'https://connect.garmin.com/modern/',  # noqa
+            'redirectAfterAccountLoginUrl': 'https://connect.garmin.com/modern/',  # noqa
             'rememberMeChecked': 'false',
             'rememberMeShown': 'true',
             'rememberMyBrowserChecked': 'false',
