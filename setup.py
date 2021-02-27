@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from setuptools import setup
 
 
@@ -8,24 +9,24 @@ def requirements(path):
 
 setup(
     name="garmin-uploader",
-    version=open("VERSION").read().replace('\n', ''),
+    version=open("VERSION").read().replace("\n", ""),
     author="Bastien Abadie",
     author_email="bastien@nextcairn.com",
     description="A tool to upload FIT, GPX, and TCX files"
-                "to the Garmin Connect web site.",
+    "to the Garmin Connect web site.",
     url="https://github.com/La0/garmin-uploader",
     license="GPL",
     keywords="GARMIN CONNECT GPS TCX GPX FIT UPLOAD UPLOADER",
-    packages=['garmin_uploader'],
-    install_requires=requirements('requirements.txt'),
-    tests_require=requirements('requirements-tests.txt'),
+    packages=["garmin_uploader"],
+    install_requires=requirements("requirements.txt"),
+    tests_require=requirements("requirements-tests.txt"),
     entry_points={
-        'console_scripts': [
-            'gupload = garmin_uploader.cli:main',
+        "console_scripts": [
+            "gupload = garmin_uploader.cli:main",
         ]
     },
     package_data={
-        'garmin_uploader': ['*.txt'],
+        "garmin_uploader": ["*.txt"],
     },
     classifiers=[
         "Development Status :: 4 - Beta",
