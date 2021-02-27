@@ -24,4 +24,3 @@ jobs:
         run: flake8
       - name: Test with pytest
         run: pytest
-          pytest
