@@ -61,13 +61,13 @@ class GarminAPI:
             ('service', 'https://connect.garmin.com/modern/'),
             ('webhost', 'https://connect.garmin.com/modern/'),
             ('source', 'https://connect.garmin.com/signin/'),
-            ('redirectAfterAccountLoginUrl', 'https://connect.garmin.com/modern/'),
-            ('redirectAfterAccountCreationUrl', 'https://connect.garmin.com/modern/'),
-            ('gauthHost', 'https://sso.garmin.com/sso'),
+            ('redirectAfterAccountLoginUrl', 'https://connect.garmin.com/modern/'),  # noqa
+            ('redirectAfterAccountCreationUrl', 'https://connect.garmin.com/modern/'),  # noqa
+            ('gauthHost', sso_hostname),
             ('locale', 'fr_FR'),
             ('id', 'gauth-widget'),
             ('cssUrl', 'https://connect.garmin.com/gauth-custom-v3.2-min.css'),
-            ('privacyStatementUrl', 'https://www.garmin.com/fr-FR/privacy/connect/'),
+            ('privacyStatementUrl', 'https://www.garmin.com/fr-FR/privacy/connect/'),  # noqa
             ('clientId', 'GarminConnect'),
             ('rememberMeShown', 'true'),
             ('rememberMeChecked', 'false'),
@@ -114,10 +114,9 @@ class GarminAPI:
           '_csrf': csrf_token,
         }
         headers = {
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',  # noqa
             'Accept-Language': 'fr,en-US;q=0.7,en;q=0.3',
             'Accept-Encoding': 'gzip, deflate, br',
-            #'Content-Type': 'application/x-www-form-urlencoded',
             'Origin': 'https://sso.garmin.com',
             'DNT': '1',
             'Connection': 'keep-alive',
@@ -134,7 +133,7 @@ class GarminAPI:
 
         if not res.ok:
             if res.status_code == 429:
-                raise Exception('Authentication failed due to too many requests (429). Retry later...')
+                raise Exception('Authentication failed due to too many requests (429). Retry later...')  # noqa
             raise Exception('Authentification failed.')
 
         # Check we have sso guid in cookies
