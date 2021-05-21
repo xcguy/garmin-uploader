@@ -3,6 +3,11 @@ Garmin Uploader Release Notes
 
 Maintained by [Bastien Abadie](https://github.com/La0)
 
+Version 1.0.10
+-------------
+
+ * Update authentification protocol (Cloudflare issues, issue #28)
+
 Version 1.0.9
 -------------
 
