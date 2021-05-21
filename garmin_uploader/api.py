@@ -57,43 +57,44 @@ class GarminAPI:
         # Full parameters from Firebug, we have to maintain
         # Fuck this shit.
         # Who needs mandatory urls in a request parameters !
-        params = {
-            'clientId': 'GarminConnect',
-            'connectLegalTerms': 'true',
-            'consumeServiceTicket': 'false',
-            'createAccountShown': 'true',
-            'cssUrl': 'https://connect.garmin.com/gauth-custom-v1.2-min.css',
-            'displayNameShown': 'false',
-            'embedWidget': 'false',
-            'gauthHost': 'https://sso.garmin.com/sso',
-            'generateExtraServiceTicket': 'true',
-            'generateNoServiceTicket': 'false',
-            'generateTwoExtraServiceTickets': 'true',
-            'globalOptInChecked': 'false',
-            'globalOptInShown': 'true',
-            'id': 'gauth-widget',
-            'initialFocus': 'true',
-            'locale': 'fr_FR',
-            'locationPromptShown': 'true',
-            'mfaRequired': 'false',
-            'mobile': 'false',
-            'openCreateAccount': 'false',
-            'privacyStatementUrl': 'https://www.garmin.com/fr-FR/privacy/connect/',  # noqa
-            'redirectAfterAccountCreationUrl': 'https://connect.garmin.com/modern/',  # noqa
-            'redirectAfterAccountLoginUrl': 'https://connect.garmin.com/modern/',  # noqa
-            'rememberMeChecked': 'false',
-            'rememberMeShown': 'true',
-            'rememberMyBrowserChecked': 'false',
-            'rememberMyBrowserShown': 'false',
-            'service': 'https://connect.garmin.com/modern/',
-            'showConnectLegalAge': 'false',
-            'showPassword': 'true',
-            'showPrivacyPolicy': 'false',
-            'showTermsOfUse': 'false',
-            'source': 'https://connect.garmin.com/signin/',
-            'useCustomHeader': 'false',
-            'webhost': sso_hostname,
-        }
+        params = [
+            ('service', 'https://connect.garmin.com/modern/'),
+            ('webhost', 'https://connect.garmin.com/modern/'),
+            ('source', 'https://connect.garmin.com/signin/'),
+            ('redirectAfterAccountLoginUrl', 'https://connect.garmin.com/modern/'),  # noqa
+            ('redirectAfterAccountCreationUrl', 'https://connect.garmin.com/modern/'),  # noqa
+            ('gauthHost', sso_hostname),
+            ('locale', 'fr_FR'),
+            ('id', 'gauth-widget'),
+            ('cssUrl', 'https://connect.garmin.com/gauth-custom-v3.2-min.css'),
+            ('privacyStatementUrl', 'https://www.garmin.com/fr-FR/privacy/connect/'),  # noqa
+            ('clientId', 'GarminConnect'),
+            ('rememberMeShown', 'true'),
+            ('rememberMeChecked', 'false'),
+            ('createAccountShown', 'true'),
+            ('openCreateAccount', 'false'),
+            ('displayNameShown', 'false'),
+            ('consumeServiceTicket', 'false'),
+            ('initialFocus', 'true'),
+            ('embedWidget', 'false'),
+            ('generateExtraServiceTicket', 'true'),
+            ('generateTwoExtraServiceTickets', 'true'),
+            ('generateNoServiceTicket', 'false'),
+            ('globalOptInShown', 'true'),
+            ('globalOptInChecked', 'false'),
+            ('mobile', 'false'),
+            ('connectLegalTerms', 'true'),
+            ('showTermsOfUse', 'false'),
+            ('showPrivacyPolicy', 'false'),
+            ('showConnectLegalAge', 'false'),
+            ('locationPromptShown', 'true'),
+            ('showPassword', 'true'),
+            ('useCustomHeader', 'false'),
+            ('mfaRequired', 'false'),
+            ('performMFACheck', 'false'),
+            ('rememberMyBrowserShown', 'false'),
+            ('rememberMyBrowserChecked', 'false'),
+        ]
         res = session.get(URL_LOGIN, params=params)
         if res.status_code != 200:
             raise Exception('No login form')
@@ -113,26 +114,31 @@ class GarminAPI:
           '_csrf': csrf_token,
         }
         headers = {
-          'Host': URL_HOST_SSO,
-          'Referer': URL_SSO_SIGNIN,
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',  # noqa
+            'Accept-Language': 'fr,en-US;q=0.7,en;q=0.3',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'Origin': 'https://sso.garmin.com',
+            'DNT': '1',
+            'Connection': 'keep-alive',
+            'Referer': res.url,
+            'Upgrade-Insecure-Requests': '1',
+            'Sec-Fetch-Dest': 'iframe',
+            'Sec-Fetch-Mode': 'navigate',
+            'Sec-Fetch-Site': 'same-origin',
+            'Sec-Fetch-User': '?1',
+            'TE': 'Trailers',
         }
         res = session.post(URL_LOGIN, params=params, data=data,
                            headers=headers)
+
         if not res.ok:
+            if res.status_code == 429:
+                raise Exception('Authentication failed due to too many requests (429). Retry later...')  # noqa
             raise Exception('Authentification failed.')
 
         # Check we have sso guid in cookies
         if 'GARMIN-SSO-GUID' not in session.cookies:
             raise Exception('Missing Garmin auth cookie')
-
-        # Try to find the full post login url in response
-        regex = 'var response_url(\s+)= (\"|\').*?ticket=(?P<ticket>[\w\-]+)(\"|\')'  # noqa
-        params = {}
-        matches = re.search(regex, res.text)
-        if not matches:
-            raise Exception('Missing service ticket')
-        params['ticket'] = matches.group('ticket')
-        logger.debug('Found service ticket {}'.format(params['ticket']))
 
         # Second auth step
         # Needs a service ticket from previous response
