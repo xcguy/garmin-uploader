@@ -1,4 +1,5 @@
 import requests
+import cloudscraper
 
 import re
 from garmin_uploader import logger
@@ -39,12 +40,8 @@ class GarminAPI:
         on Garmin Connect as closely as possible
         Outputs a Requests session, loaded with precious cookies
         """
-        # Use a valid Browser user agent
-        # TODO: use several UA picked randomly
-        session = requests.Session()
-        session.headers.update({
-            'User-Agent': 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:48.0) Gecko/20100101 Firefox/50.0',  # noqa
-        })
+        # Use Cloudscraper to avoid cloudflare spam detection
+        session = cloudscraper.create_scraper()
 
         # Request sso hostname
         sso_hostname = None
