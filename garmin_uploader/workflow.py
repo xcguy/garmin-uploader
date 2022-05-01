@@ -14,11 +14,12 @@ class Activity(object):
     """
     Garmin Connect Activity model
     """
-    def __init__(self, path, name=None, type=None):
+    def __init__(self, path, name=None, type=None, notes=None):
         self.id = None  # provided on upload
         self.path = path
         self.name = name
         self.type = type
+        self.notes = notes
 
     def __repr__(self):
         if self.id is None:
@@ -86,19 +87,12 @@ class Activity(object):
         if uploaded:
             logger.info('Uploaded activity {}'.format(self))
 
-            # Set activity name if specified
-            if self.name:
+            # Set activity info, if specified
+            if self.name or self.type or self.notes:
                 try:
-                    api.set_activity_name(user.session, self)
+                    api.set_activity_info(user.session, self)
                 except GarminAPIException as e:
-                    logger.warning('Activity name update failed: {}'.format(e))
-
-            # Set activity type if specified
-            if self.type:
-                try:
-                    api.set_activity_type(user.session, self)
-                except GarminAPIException as e:
-                    logger.warning('Activity type update failed: {}'.format(e))
+                    logger.warning('Activity info update failed: {}'.format(e))
 
         else:
             logger.info('Activity already uploaded {}'.format(self))
@@ -208,7 +202,7 @@ class Workflow():
             with open(csv_file, 'r') as csvfile:
                 reader = csv.DictReader(csvfile)
                 activities += [
-                    Activity(row['filename'], row['name'], row['type'])
+                    Activity(row['filename'], row['name'], row['type'], row['notes'])
                     for row in reader
                     if is_activity(row['filename'])
                 ]

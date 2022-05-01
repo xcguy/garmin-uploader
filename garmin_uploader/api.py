@@ -254,3 +254,37 @@ class GarminAPI:
         res = session.post(url, json=data, headers=headers)
         if not res.ok:
             raise GarminAPIException('Activity type not set: {}'.format(res.content))  # noqa
+
+    def set_activity_info(self, session, activity):
+        """
+        Update activity fields
+        """
+        assert activity.id is not None
+
+        data = {
+            'activityId': activity.id
+        }
+
+        if activity.type:
+            # Load the corresponding type key on Garmin Connect
+            types = self.load_activity_types()
+            type_key = types.get(activity.type)
+            if type_key is None:
+                logger.error("Activity type '{}' not valid".format(activity.type))
+                return False
+            else:
+                data['activityTypeDTO'] = type_key
+
+        if activity.name:
+                data['activityName'] = activity.name
+        if activity.notes:
+                data['description'] = activity.notes
+
+        assert len(data) > 1
+
+        url = '{}/{}'.format(URL_ACTIVITY_BASE, activity.id)
+        headers = dict(self.common_headers)  # clone
+        headers['X-HTTP-Method-Override'] = 'PUT'  # weird. again.
+        res = session.post(url, json=data, headers=headers)
+        if not res.ok:
+            raise GarminAPIException('Activity info not set: {}'.format(res.content))  # noqa
