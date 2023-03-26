@@ -1,4 +1,4 @@
-import requests
+import cloudscraper
 
 import re
 from garmin_uploader import logger
@@ -39,12 +39,11 @@ class GarminAPI:
         on Garmin Connect as closely as possible
         Outputs a Requests session, loaded with precious cookies
         """
-        # Use a valid Browser user agent
-        # TODO: use several UA picked randomly
-        session = requests.Session()
-        session.headers.update({
-            'User-Agent': 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:48.0) Gecko/20100101 Firefox/50.0',  # noqa
-        })
+
+        # Use Cloudscraper to avoid cloudflare spam detection
+        # session = cloudscraper.create_scraper( browser={ 'browser': 'firefox', 'platform': 'windows', 'mobile': False } )
+        session = cloudscraper.create_scraper()
+        logger.info('Using cloud scraper lib')
 
         # Request sso hostname
         sso_hostname = None
@@ -64,7 +63,7 @@ class GarminAPI:
             ('redirectAfterAccountLoginUrl', 'https://connect.garmin.com/modern/'),  # noqa
             ('redirectAfterAccountCreationUrl', 'https://connect.garmin.com/modern/'),  # noqa
             ('gauthHost', sso_hostname),
-            ('locale', 'fr_FR'),
+            ('locale', 'en_US'),
             ('id', 'gauth-widget'),
             ('cssUrl', 'https://connect.garmin.com/gauth-custom-v3.2-min.css'),
             ('privacyStatementUrl', 'https://www.garmin.com/fr-FR/privacy/connect/'),  # noqa
@@ -219,7 +218,9 @@ class GarminAPI:
             return GarminAPI.activity_types
 
         logger.debug('Fetching activity types')
-        resp = requests.get(URL_ACTIVITY_TYPES, headers=self.common_headers)
+        # Use Cloudscraper to avoid cloudflare spam detection
+        session = cloudscraper.create_scraper()
+        resp = session.get(URL_ACTIVITY_TYPES, headers=self.common_headers)
         if not resp.ok:
             raise GarminAPIException('Failed to retrieve activity types')
 

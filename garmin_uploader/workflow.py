@@ -158,10 +158,10 @@ class Workflow():
 
             # Valid file extensions are .tcx, .fit, and .gpx
             if extension in VALID_GARMIN_FILE_EXTENSIONS:
-                logger.debug("File '{}' extension '{}' is valid.".format(filename, extension))  # noqa
+                logger.debug("File '{}' extension '{}' is valid track file. ".format(filename, extension))  # noqa
                 return True
             else:
-                logger.warning("File '{}' extension '{}' is not valid. Skipping file...".format(filename, extension))  # noqa
+                logger.warning("File '{}' extension '{}' is not valid track file. Skipping file...".format(filename, extension))  # noqa
                 return False
 
         valid_paths, csv_files = [], []
@@ -209,6 +209,9 @@ class Workflow():
 
         if len(activities) == 0:
             raise Exception('No valid files.')
+        else:
+            logger.info("{} activities will be processed...".format(len(activities)))
+
 
         return activities
 
